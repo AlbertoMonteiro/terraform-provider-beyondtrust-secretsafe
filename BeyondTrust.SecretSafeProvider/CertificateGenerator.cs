@@ -1,3 +1,5 @@
+using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace BeyondTrust.SecretSafeProvider;
@@ -8,33 +10,34 @@ public static class CertificateGenerator
 
     public static X509Certificate2 GenerateSelfSignedCertificate(string subjectName, string issuerName)
     {
-        var certB64 = """
-            Code to generate this certificate
+        using var rsa = RSA.Create(KeyStrength);
 
-            [Subject]
-            CN=127.0.0.1
+        var subject = new X500DistinguishedName(subjectName);
+        var request = new CertificateRequest(subject, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-            [Issuer]
-            CN=root ca
+        request.CertificateExtensions.Add(
+            new X509BasicConstraintsExtension(false, false, 0, false));
 
-            [Serial Number]
-            VALUE
+        request.CertificateExtensions.Add(
+            new X509KeyUsageExtension(
+                X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, false));
 
-            [Not Before]
-            07/12/2024 21:00:00
+        request.CertificateExtensions.Add(
+            new X509EnhancedKeyUsageExtension(
+                [new Oid("1.3.6.1.5.5.7.3.1")], false)); // TLS Server Authentication
 
-            [Not After]
-            07/12/2026 21:00:00
+        var san = new SubjectAlternativeNameBuilder();
+        san.AddDnsName("localhost");
+        san.AddIpAddress(IPAddress.Loopback);
+        request.CertificateExtensions.Add(san.Build());
 
-            [Thumbprint]
-            SOMEThumbprint
+        var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var notAfter = DateTimeOffset.UtcNow.AddYears(2);
 
-            [Nome Alternativo Para o Requerente]
-            Nome DNS=localhost
-            """;
+        var cert = request.CreateSelfSigned(notBefore, notAfter);
 
-        var cert = Convert.FromBase64String(certB64);
-
-        return X509CertificateLoader.LoadPkcs12(cert, null);
+        return X509CertificateLoader.LoadPkcs12(
+            cert.Export(X509ContentType.Pkcs12), null,
+            X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
     }
 }
