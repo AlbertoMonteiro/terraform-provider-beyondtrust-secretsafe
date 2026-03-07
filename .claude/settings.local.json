@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add BeyondTrust.SecretSafeProvider/CertificateGenerator.cs)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
