@@ -8,7 +8,8 @@ var secretsafe = builder
     .AsHttp2Service()
     .WithMappingsPath(mappingsPath)
     .WithWatchStaticMappings()
-    .WithOpenTelemetry();
+    .WithOpenTelemetry()
+    .WithLifetime(ContainerLifetime.Persistent);
 
 builder.AddDockerfile("terraform", repoRoot, Path.Combine(repoRoot, "Dockerfile.test"))
     .WaitFor(secretsafe)

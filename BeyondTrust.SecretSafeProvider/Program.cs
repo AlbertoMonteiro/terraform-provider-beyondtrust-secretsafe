@@ -1,26 +1,26 @@
 using System.Net;
 using BeyondTrust.SecretSafeProvider;
 using BeyondTrust.SecretSafeProvider.Services;
-// #if DEBUG
-// var builder = WebApplication.CreateBuilder(args);
-// #else
+
 var builder = WebApplication.CreateSlimBuilder(args);
-// #endif
 
 builder.Logging.ClearProviders();
 
 var certificate = CertificateGenerator.GenerateSelfSignedCertificate("CN=127.0.0.1", "CN=root ca");
 
 builder.WebHost.ConfigureKestrel(x =>
-    x.Listen(IPAddress.Loopback, 0, x => x.UseHttps(x =>
+    x.Listen(IPAddress.Loopback, 5000, x => x.UseHttps(x =>
     {
         x.ServerCertificate = certificate;
 
         x.AllowAnyClientCertificate();
     })));
 
-// Add services to the container.
 builder.Services.AddGrpc();
+
+var url = builder.Configuration.GetValue<string>("services:secretsafe-mock:http:0") ?? "http://localhost:32772";
+
+builder.Services.AddHttpClient<IServiceCaller, ServiceCaller>("weather", c => c.BaseAddress = new Uri(url!));
 
 var app = builder.Build();
 
@@ -39,7 +39,6 @@ app.Lifetime.ApplicationStarted.Register(() =>
     stdout.Flush();
 });
 
-// Configure the HTTP request pipeline.
 app.MapGrpcService<Terraform5ProviderService>();
 app.MapGet("/", () => "Communication with gRPC endpoints must be made through a gRPC client. To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909");
 
