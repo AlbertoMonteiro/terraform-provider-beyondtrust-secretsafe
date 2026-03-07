@@ -19,32 +19,29 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: linux
-            arch: amd64
-            rid: linux-musl-x64
-            platform: linux/amd64
-            runner: ubuntu-latest
-          - os: linux
-            arch: arm64
-            rid: linux-musl-arm64
-            platform: linux/arm64
-            runner: ubuntu-latest
-          - os: windows
-            arch: amd64
-            rid: win-x64
-            runner: windows-latest
+          # Linux (Alpine Docker / musl — StaticExecutable=false to preserve dlopen)
+          - { os: linux,   arch: amd64, rid: linux-musl-x64,  platform: linux/amd64,   runner: ubuntu-latest }
+          - { os: linux,   arch: arm64, rid: linux-musl-arm64, platform: linux/arm64,   runner: ubuntu-latest }
+          - { os: linux,   arch: arm,   rid: linux-musl-arm,  platform: linux/arm/v7,  runner: ubuntu-latest }
+          - { os: linux,   arch: "386", rid: linux-musl-x86,  platform: linux/386,     runner: ubuntu-latest }
+          # macOS (native runners, no Docker)
+          - { os: darwin,  arch: amd64, rid: osx-x64,         runner: macos-13        }
+          - { os: darwin,  arch: arm64, rid: osx-arm64,        runner: macos-latest    }
+          # Windows (cross-compile from windows-latest)
+          - { os: windows, arch: amd64, rid: win-x64,          runner: windows-latest  }
+          - { os: windows, arch: arm64, rid: win-arm64,         runner: windows-latest  }
+          - { os: windows, arch: "386", rid: win-x86,          runner: windows-latest  }
+          - { os: windows, arch: arm,   rid: win-arm,          runner: windows-latest  }
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- Linux: build via Alpine Docker (Native AOT / musl) ---
+      # ── Linux ──────────────────────────────────────────────────────────────
 
-      - name: Set up QEMU (for ARM64 cross-build)
-        if: matrix.os == 'linux' && matrix.arch == 'arm64'
+      - name: Set up QEMU (non-amd64 Linux cross-build)
+        if: matrix.os == 'linux' && matrix.arch != 'amd64'
         uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
 
       - name: Build via Alpine Docker (Native AOT / musl)
         if: matrix.os == 'linux'
@@ -65,29 +62,29 @@ jobs:
                 --self-contained true
             "
 
-      # --- Windows: build directly on the runner ---
+      # ── macOS / Windows ────────────────────────────────────────────────────
 
       - name: Setup .NET SDK
-        if: matrix.os == 'windows'
+        if: matrix.os != 'linux'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Build (Windows Native AOT)
-        if: matrix.os == 'windows'
-        shell: pwsh
+      - name: Build (macOS / Windows Native AOT)
+        if: matrix.os != 'linux'
+        shell: bash
         run: |
-          dotnet publish BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj `
-            -c Release `
-            -r ${{ matrix.rid }} `
-            -o dist/${{ matrix.os }}_${{ matrix.arch }} `
-            -p:PublishAot=true `
+          dotnet publish BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            -o dist/${{ matrix.os }}_${{ matrix.arch }} \
+            -p:PublishAot=true \
             --self-contained true
 
-      # --- Package ---
+      # ── Package ────────────────────────────────────────────────────────────
 
-      - name: Package binary into zip (Linux)
-        if: matrix.os == 'linux'
+      - name: Package binary into zip (Linux / macOS)
+        if: matrix.os != 'windows'
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           BINARY="terraform-provider-${PROVIDER_NAME}"
@@ -96,7 +93,6 @@ jobs:
           cp "dist/${{ matrix.os }}_${{ matrix.arch }}/${BINARY}" "${BINARY}"
           zip "${ZIPNAME}" "${BINARY}"
           rm "${BINARY}"
-
           echo "Built: ${ZIPNAME}"
 
       - name: Package binary into zip (Windows)
