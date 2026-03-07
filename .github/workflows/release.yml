@@ -1,0 +1,160 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  PROVIDER_NAME: secretsafe
+  DOTNET_VERSION: '10.0'
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}_${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            rid: linux-musl-x64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - os: linux
+            arch: arm64
+            rid: linux-musl-arm64
+            platform: linux/arm64
+            runner: ubuntu-latest
+          - os: windows
+            arch: amd64
+            rid: win-x64
+            runner: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Linux: build via Alpine Docker (Native AOT / musl) ---
+
+      - name: Set up QEMU (for ARM64 cross-build)
+        if: matrix.os == 'linux' && matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build via Alpine Docker (Native AOT / musl)
+        if: matrix.os == 'linux'
+        run: |
+          docker run --rm \
+            --platform ${{ matrix.platform }} \
+            -v "${{ github.workspace }}:/src" \
+            -w /src \
+            mcr.microsoft.com/dotnet/sdk:10.0-alpine \
+            sh -c "
+              apk add --no-cache clang gcc build-base zlib-dev musl-dev gcompat && \
+              dotnet publish BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj \
+                -c Release \
+                -r ${{ matrix.rid }} \
+                -o /src/dist/${{ matrix.os }}_${{ matrix.arch }} \
+                -p:PublishAot=true \
+                -p:StaticExecutable=false \
+                --self-contained true
+            "
+
+      # --- Windows: build directly on the runner ---
+
+      - name: Setup .NET SDK
+        if: matrix.os == 'windows'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Build (Windows Native AOT)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          dotnet publish BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            -o dist/${{ matrix.os }}_${{ matrix.arch }} `
+            -p:PublishAot=true `
+            --self-contained true
+
+      # --- Package ---
+
+      - name: Package binary into zip (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BINARY="terraform-provider-${PROVIDER_NAME}"
+          ZIPNAME="${BINARY}_${VERSION}_${{ matrix.os }}_${{ matrix.arch }}.zip"
+
+          cp "dist/${{ matrix.os }}_${{ matrix.arch }}/${BINARY}" "${BINARY}"
+          zip "${ZIPNAME}" "${BINARY}"
+          rm "${BINARY}"
+
+          echo "Built: ${ZIPNAME}"
+
+      - name: Package binary into zip (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          $binary  = "terraform-provider-$env:PROVIDER_NAME"
+          $zipName = "${binary}_${version}_${{ matrix.os }}_${{ matrix.arch }}.zip"
+          $src     = "dist\${{ matrix.os }}_${{ matrix.arch }}\${binary}.exe"
+
+          Compress-Archive -Path $src -DestinationPath $zipName
+          Write-Host "Built: $zipName"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-${{ matrix.os }}-${{ matrix.arch }}
+          path: "*.zip"
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SUMS_FILE="terraform-provider-${PROVIDER_NAME}_${VERSION}_SHA256SUMS"
+          sha256sum *.zip > "${SUMS_FILE}"
+          cat "${SUMS_FILE}"
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Sign SHA256SUMS
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SUMS_FILE="terraform-provider-${PROVIDER_NAME}_${VERSION}_SHA256SUMS"
+          gpg --batch --yes --detach-sign "${SUMS_FILE}"
+          ls -la "${SUMS_FILE}"*
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.zip
+            *_SHA256SUMS
+            *_SHA256SUMS.sig
+          generate_release_notes: true
+          fail_on_unmatched_files: true

@@ -11,7 +11,11 @@
       "Bash(docker run --rm --entrypoint sh bt-provider-test -c \"ls -lh /providers/terraform-provider-secretsafe\")",
       "Bash(docker history bt-provider-test --format \"{{.CreatedBy}}\\\\t{{.Size}}\")",
       "Bash(docker run --rm --entrypoint sh hashicorp/terraform:latest -c \"apk info | grep -i ssl; find /usr/lib /lib -name ''libssl*'' -o -name ''libcrypto*'' 2>/dev/null\")",
-      "WebFetch(domain:docs.beyondtrust.com)"
+      "WebFetch(domain:docs.beyondtrust.com)",
+      "Read(//c/dev/beyond-trust-secret-safe-provider/{printf \"\"\"\"%.1f MB/n\"\"\"\", $1/1024/**)",
+      "Bash(docker run --rm bt-provider-test sh -c 'ls -lh /usr/local/bin/terraform-provider-secretsafe 2>/dev/null || find / -name \"\"terraform-provider-secretsafe\"\" -ls 2>/dev/null | head -5')",
+      "Bash(docker run --rm --entrypoint sh bt-provider-test -c 'find / -name \"\"terraform-provider-secretsafe\"\" 2>/dev/null | xargs ls -lh 2>/dev/null')",
+      "Bash(git add README.md .github/)"
     ]
   }
 }

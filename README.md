@@ -6,7 +6,7 @@ A Terraform provider for [BeyondTrust Secret Safe](https://www.beyondtrust.com/s
 
 Most Terraform providers are written in Go because Go's stdlib includes a pure-Go TLS/crypto stack, making it trivial to ship a self-contained binary. This provider achieves the same result in C#:
 
-- **No extra OpenSSL install required** — TLS certificate generation uses [BouncyCastle.Cryptography](https://www.bouncycastle.org/csharp/), a pure .NET crypto library. The `hashicorp/terraform` Alpine image already ships `libssl.so.3` (via `ssl_client`), which covers the `HttpClient` HTTPS calls to the BeyondTrust API.
+- **No extra OpenSSL install required** — TLS certificate generation uses .NET's built-in `System.Security.Cryptography` (`RSA.Create`, `CertificateRequest`, `X509Certificate2`). The `hashicorp/terraform` Alpine image already ships `libssl.so.3` (via `ssl_client`), which covers the `HttpClient` HTTPS calls to the BeyondTrust API.
 - **Single native binary** — AOT compilation produces a standalone executable with no .NET runtime requirement.
 - **~15 MB** on Alpine/musl (`linux-musl-x64`, `TrimMode=full`).
 
@@ -36,7 +36,7 @@ When Terraform spawns the provider binary, it reads a single handshake line from
 ### gRPC Server
 
 - Kestrel listens on `IPAddress.Loopback` port `0` (OS assigns a random port).
-- HTTPS/mTLS with a self-signed certificate generated at startup via BouncyCastle.
+- HTTPS/mTLS with a self-signed certificate generated at startup via `System.Security.Cryptography`.
 - `AllowAnyClientCertificate()` — Terraform presents a client cert for mutual TLS.
 - `WebApplication.CreateSlimBuilder` is used (required for AOT compatibility).
 
@@ -82,7 +82,7 @@ Models use `[MessagePackObject]` + `[Key("attr_name")]` so attribute names match
 ```
 BeyondTrust.SecretSafeProvider/
 ├── Program.cs                        # Kestrel setup + handshake emission
-├── CertificateGenerator.cs           # Pure-managed TLS cert via BouncyCastle
+├── CertificateGenerator.cs           # Self-signed TLS cert via System.Security.Cryptography
 ├── Models/
 │   ├── CredentialData.cs             # secretsafe_credential_data state + schema
 │   ├── ProviderConfiguration.cs      # Provider block attributes (key, runas, baseUrl)
@@ -304,7 +304,7 @@ gpg --detach-sign terraform-provider-secretsafe_1.0.0_SHA256SUMS
 
 **Strategy pattern for data sources** — `Terraform5ProviderService` has zero knowledge of individual data sources. Each handler is a self-contained class registered via DI. `GetSchema` and `ReadDataSource` discover handlers at runtime through `IEnumerable<IDataSourceHandler>`, making it trivial to add new data sources without touching the service.
 
-**BouncyCastle for TLS cert generation** — On Linux, `RSA.Create()` uses `RSAOpenSsl` which calls `dlopen("libssl.so.3")`. The `hashicorp/terraform` image does ship OpenSSL (via Alpine's `ssl_client` package), but using BouncyCastle for cert generation keeps that code path free of OpenSSL entirely, which is useful on minimal Alpine environments.
+**Pure .NET TLS cert generation** — `CertificateGenerator` uses only `System.Security.Cryptography` BCL types (`RSA.Create`, `CertificateRequest`, `X509CertificateLoader`). On Linux, `RSA.Create()` delegates to `RSAOpenSsl`, which calls `dlopen("libssl.so.3")` — available in the `hashicorp/terraform` Alpine image via the `ssl_client` package. No third-party crypto library is required.
 
 **SmartSerializer** — Terraform sends `DynamicValue` with either `msgpack` or `json` populated depending on context. `SmartSerializer` checks both fields and picks the non-empty one, so handlers never need to worry about which encoding is in use.
 
