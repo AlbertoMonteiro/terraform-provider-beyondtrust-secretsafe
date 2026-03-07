@@ -10,7 +10,8 @@
       "Bash(docker build --no-cache -f Dockerfile.test -t bt-provider-test .)",
       "Bash(docker run --rm --entrypoint sh bt-provider-test -c \"ls -lh /providers/terraform-provider-secretsafe\")",
       "Bash(docker history bt-provider-test --format \"{{.CreatedBy}}\\\\t{{.Size}}\")",
-      "Bash(docker run --rm --entrypoint sh hashicorp/terraform:latest -c \"apk info | grep -i ssl; find /usr/lib /lib -name ''libssl*'' -o -name ''libcrypto*'' 2>/dev/null\")"
+      "Bash(docker run --rm --entrypoint sh hashicorp/terraform:latest -c \"apk info | grep -i ssl; find /usr/lib /lib -name ''libssl*'' -o -name ''libcrypto*'' 2>/dev/null\")",
+      "WebFetch(domain:docs.beyondtrust.com)"
     ]
   }
 }

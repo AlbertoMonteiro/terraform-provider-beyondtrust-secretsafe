@@ -11,13 +11,16 @@ var secretsafe = builder
     .WithOpenTelemetry()
     .WithLifetime(ContainerLifetime.Persistent);
 
-builder.AddDockerfile("terraform", repoRoot, Path.Combine(repoRoot, "Dockerfile.test"))
+builder.AddDockerfile("bt-provider-test", repoRoot, Path.Combine(repoRoot, "Dockerfile.test"))
+    .WithImageTag("latest")
     .WaitFor(secretsafe)
-    .WithReference(secretsafe);
+    .WithReference(secretsafe)
+    .WithEnvironment("BEYONDTRUST_URL", secretsafe.Resource.GetEndpoint("http")); ;
 
 //builder.AddProject<Projects.BeyondTrust_SecretSafeProvider>("provider")
 //    .WithHttpsEndpoint(port: 9999, targetPort: 5000, name: "dashboard")
 //    .WaitFor(secretsafe)
-//    .WithReference(secretsafe);
+//    .WithReference(secretsafe)
+//    .WithEnvironment("BEYONDTRUST_URL", secretsafe.Resource.GetEndpoint("http"));
 
 builder.Build().Run();

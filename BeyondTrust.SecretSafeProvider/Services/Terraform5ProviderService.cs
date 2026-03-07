@@ -1,23 +1,27 @@
-using Google.Protobuf;
+using BeyondTrust.SecretSafeProvider.Models;
+using BeyondTrust.SecretSafeProvider.Serialization;
 using Grpc.Core;
+using MessagePack;
 using System.Text.Json;
 
 namespace BeyondTrust.SecretSafeProvider.Services;
 
-public class Terraform5ProviderService(ILogger<Terraform5ProviderService> logger, IServiceCaller serviceCaller) : Provider.ProviderBase
+public class Terraform5ProviderService(
+    IEnumerable<IDataSourceHandler> dataSourceHandlers,
+    ProviderConfiguration configuration) : Provider.ProviderBase
 {
-    private const string DataSourceName = "beyondtrust_hello";
-    private readonly ILogger<Terraform5ProviderService> _logger = logger;
-    private readonly IServiceCaller _serviceCaller = serviceCaller;
+    private readonly IReadOnlyDictionary<string, IDataSourceHandler> _handlers =
+        dataSourceHandlers.ToDictionary(h => h.TypeName);
+    private readonly ProviderConfiguration _configuration = configuration;
 
     public override Task<GetProviderSchema.Types.Response> GetSchema(GetProviderSchema.Types.Request request, ServerCallContext context)
     {
-        var response = new GetProviderSchema.Types.Response
-        {
-            Provider = new Schema { Block = new Schema.Types.Block() },
-        };
+        var response = new GetProviderSchema.Types.Response();
 
-        response.DataSourceSchemas[DataSourceName] = MyClass.GetSchema();
+        foreach (var handler in _handlers.Values)
+            response.DataSourceSchemas[handler.TypeName] = handler.GetSchema();
+
+        response.Provider = ProviderConfiguration.GetSchema();
 
         return Task.FromResult(response);
     }
@@ -26,7 +30,11 @@ public class Terraform5ProviderService(ILogger<Terraform5ProviderService> logger
         => Task.FromResult(new PrepareProviderConfig.Types.Response { PreparedConfig = request.Config });
 
     public override Task<Configure.Types.Response> Configure(Configure.Types.Request request, ServerCallContext context)
-        => Task.FromResult(new Configure.Types.Response());
+    {
+        var cfg = SmartSerializer.Deserialize<ProviderConfiguration>(request.Config);
+        _configuration.ReplaceValues(cfg);
+        return Task.FromResult(new Configure.Types.Response());
+    }
 
     public override Task<ValidateDataSourceConfig.Types.Response> ValidateDataSourceConfig(ValidateDataSourceConfig.Types.Request request, ServerCallContext context)
         => Task.FromResult(new ValidateDataSourceConfig.Types.Response());
@@ -51,20 +59,42 @@ public class Terraform5ProviderService(ILogger<Terraform5ProviderService> logger
 
     public override async Task<ReadDataSource.Types.Response> ReadDataSource(ReadDataSource.Types.Request request, ServerCallContext context)
     {
-        _logger.LogInformation("ReadDataSource: {TypeName}", request.TypeName);
-
-        var weather = await _serviceCaller.GetWeatherForecastsAsync();
-
-        MyClass response = new() { Content = weather.First().ToString() };
-
-        return new ReadDataSource.Types.Response
-        {
-            State = new DynamicValue
+        if (!_handlers.TryGetValue(request.TypeName, out var handler))
+            return new ReadDataSource.Types.Response
             {
-                Msgpack = ByteString.CopyFrom(MessagePack.MessagePackSerializer.Serialize(response)),
-                Json = ByteString.CopyFrom(JsonSerializer.SerializeToUtf8Bytes(response, Json.Default.MyClass))
-            }
-        };
+                Diagnostics =
+                {
+                    new Diagnostic
+                    {
+                        Severity = Diagnostic.Types.Severity.Error,
+                        Summary  = $"Unsupported data source \"{request.TypeName}\"",
+                        Detail   = $"""
+                                   The provider does not implement the data source "{request.TypeName}". 
+                                   Available data sources: {string.Join(", ", _handlers.Keys)}.
+                                   """
+                    }
+                }
+            };
+
+        try
+        {
+            return await handler.ReadAsync(request);
+        }
+        catch (Exception ex)
+        {
+            return new ReadDataSource.Types.Response
+            {
+                Diagnostics =
+                {
+                    new Diagnostic
+                    {
+                        Severity = Diagnostic.Types.Severity.Error,
+                        Summary  = $"Error reading data source \"{request.TypeName}\"",
+                        Detail   = ex.Message,
+                    }
+                }
+            };
+        }
     }
 
     public override Task<Stop.Types.Response> Stop(Stop.Types.Request request, ServerCallContext context)

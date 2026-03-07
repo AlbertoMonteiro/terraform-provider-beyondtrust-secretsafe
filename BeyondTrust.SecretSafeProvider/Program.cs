@@ -1,6 +1,8 @@
 using System.Net;
 using BeyondTrust.SecretSafeProvider;
+using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Services;
+using Refit;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -18,9 +20,15 @@ builder.WebHost.ConfigureKestrel(x =>
 
 builder.Services.AddGrpc();
 
-var url = builder.Configuration.GetValue<string>("services:secretsafe-mock:http:0") ?? "http://localhost:32772";
-
-builder.Services.AddHttpClient<IServiceCaller, ServiceCaller>("weather", c => c.BaseAddress = new Uri(url!));
+var emptyConfiguration = new ProviderConfiguration()
+{
+    BaseUrl = "",
+    Key = "",
+    RunAs = ""
+};
+builder.Services.AddSingleton<IBeyondTrustApiFactory, BeyondTrustApiFactory>();
+builder.Services.AddSingleton(emptyConfiguration);
+builder.Services.AddSingleton<IDataSourceHandler, CredentialDataSourceHandler>();
 
 var app = builder.Build();
 

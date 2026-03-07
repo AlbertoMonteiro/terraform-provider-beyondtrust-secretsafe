@@ -1,0 +1,24 @@
+{
+  "Guid": "a1b2c3d4-0001-0000-0000-000000000001",
+  "Priority": 10,
+  "Request": {
+    "Path": "/public/v3/Auth/SignAppin",
+    "Methods": [ "POST" ],
+    "Headers": {
+      "Authorization": {
+        "Matchers": [
+          {
+            "Name": "WildcardMatcher",
+            "Pattern": "PS-Auth key=*; runas=*;"
+          }
+        ]
+      }
+    }
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

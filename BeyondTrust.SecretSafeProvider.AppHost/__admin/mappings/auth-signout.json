@@ -1,0 +1,14 @@
+{
+  "Guid": "a1b2c3d4-0002-0000-0000-000000000002",
+  "Priority": 10,
+  "Request": {
+    "Path": "/public/v3/Auth/Signout",
+    "Methods": [ "POST" ]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "Headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
