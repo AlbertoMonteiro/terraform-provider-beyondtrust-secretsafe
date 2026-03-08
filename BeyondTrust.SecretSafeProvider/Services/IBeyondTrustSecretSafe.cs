@@ -14,7 +14,7 @@ public interface IBeyondTrustSecretSafe
     public Task<SecretValue> GetSecret(Guid secretId);
 
     [Get($"{V3}/Secrets-Safe/Secrets/{{secretId}}/file/download")]
-    public Task<ApiResponse<HttpResponseMessage>> DownloadSecret(Guid secretId);
+    public Task<HttpResponseMessage> DownloadSecret(Guid secretId);
 
     [Post($"{V3}/Auth/Signout")]
     public Task<ApiResponse<HttpResponseMessage>> Signout();

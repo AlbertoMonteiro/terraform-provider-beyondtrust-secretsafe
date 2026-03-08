@@ -32,6 +32,7 @@ var emptyConfiguration = new ProviderConfiguration()
 builder.Services.AddSingleton<IBeyondTrustApiFactory, BeyondTrustApiFactory>();
 builder.Services.AddSingleton(emptyConfiguration);
 builder.Services.AddSingleton<IDataSourceHandler, CredentialDataSourceHandler>();
+builder.Services.AddSingleton<IDataSourceHandler, FileDownloadDataSourceHandler>();
 
 var app = builder.Build();
 

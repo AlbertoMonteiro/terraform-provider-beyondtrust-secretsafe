@@ -1,125 +1,254 @@
-Construção de um Terraform Provider utilizando **.NET Native AOT**, **Slim Builder** e o **Protocolo V5**.
+# PRB — Product Requirements Backlog
+
+Terraform Provider para **BeyondTrust Secret Safe** utilizando **.NET Native AOT**, **Slim Builder** e **Protocolo V5.2**.
 
 ---
 
-## 🏗️ 1. Arquitetura do Projeto
+## Arquitetura do Provider
 
-O objetivo é criar um executável nativo único que implemente a interface gRPC do Terraform.
+O provider implementa o padrão **Strategy** para Data Sources via `IDataSourceHandler`. Cada data source é registrado no DI container (`Program.cs`) e automaticamente exposto no schema do provider via `Terraform5ProviderService`.
 
-### Configuração do `.csproj`
+### Padrão de implementação para um novo Data Source
 
-Focada em **linkagem estática** e compatibilidade com **musl** (Alpine).
+1. **Model** (`Models/`) — classe `[MessagePackObject]` com `GetSchema()` estático
+2. **Handler** (`Services/DataSources/`) — implementa `IDataSourceHandler` (TypeName, GetSchema, ReadAsync)
+3. **Registro no DI** (`Program.cs`) — `builder.Services.AddSingleton<IDataSourceHandler, XxxHandler>()`
+4. **Serialização** (`Serialization/Json.cs`) — registrar `[JsonSerializable(typeof(XxxData))]`
+5. **WireMock mapping** (`AppHost/__admin/mappings/`) — mock para testes de integração
+6. **Testes unitários** — Handler tests + Schema tests (TUnit + Imposter)
+7. **Testes de integração** — Via Aspire (GetSchema + ReadDataSource msgpack + JSON)
 
-```xml
-<PropertyGroup>
-  <TargetFramework>net10.0</TargetFramework>
-  <PublishAot>true</PublishAot>
-  <StaticExecutable>true</StaticExecutable>
-  <Nullable>enable</Nullable>
-  <InvariantGlobalization>true</InvariantGlobalization>
-  <PublishTrimmed>true</PublishTrimmed>
-  <TrimMode>full</TrimMode>
-  <StackTraceSupport>false</StackTraceSupport>
-  <OptimizationPreference>Size</OptimizationPreference>
-</PropertyGroup>
+### API BeyondTrust Secret Safe v3
 
-<ItemGroup>
-  <PackageReference Include="Grpc.AspNetCore" Version="2.*" />
-</ItemGroup>
+Base: `/public/v3`
 
-```
-
-### Inicialização com Slim Builder (`Program.cs`)
-
-O Terraform V5 espera que o provider inicie um servidor gRPC e imprima uma string de handshake no `STDOUT`.
-
-```csharp
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-
-var builder = WebApplication.CreateSlimBuilder(args);
-
-// Configuração manual do Kestrel para gRPC local (h2c)
-builder.WebHost.ConfigureKestrel(options => {
-    options.ListenLocalhost(50051, o => o.Protocols = HttpProtocols.Http2);
-});
-
-builder.Services.AddGrpc();
-var app = builder.Build();
-
-app.MapGrpcService<Terraform5ProviderService>();
-
-// Handshake Protocol V5: versão_proto|versão_core|rede|endereço|tipo
-Console.WriteLine("1|5|tcp|127.0.0.1:50051|grpc");
-
-app.Run();
-
-```
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/Auth/SignAppin` | Autenticação com Key + RunAs |
+| POST | `/Auth/Signout` | Encerrar sessão |
+| GET | `/Secrets-Safe/Secrets/{secretId}` | Obter segredo (credential) |
+| GET | `/Secrets-Safe/Secrets/{secretId}/file/download` | Download de arquivo secreto |
+| GET | `/Secrets-Safe/Secrets/{secretId}/text` | Obter texto secreto |
+| GET | `/Secrets-Safe/Secrets/{secretId}/file` | Obter metadados de arquivo secreto |
+| GET | `/Secrets-Safe/Secrets` | Listar segredos |
+| GET | `/Secrets-Safe/Folders/` | Listar pastas |
+| GET | `/Secrets-Safe/Folders/{id}` | Obter pasta por ID |
 
 ---
 
-## 🛠️ 2. Ambiente de Build (Docker)
+## Data Sources — Status
 
-Para que o provider rode na imagem oficial do Terraform (Alpine), o build **precisa** ser feito no Alpine para vincular à biblioteca `musl`.
+### ✅ 1. `secretsafe_credential_data` — COMPLETO
 
-**Dockerfile de Referência:**
+**API:** `GET /Secrets-Safe/Secrets/{secretId}`
 
-```dockerfile
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
-# Instalando toolchain nativa necessária para AOT
-RUN apk add --no-cache clang gcc build-base zlib-dev musl-dev
+**Descrição:** Recupera credenciais (username/password) de um segredo no BeyondTrust Secret Safe.
 
-WORKDIR /src
-COPY . .
+**Schema Terraform:**
+| Atributo | Tipo | Required | Computed | Sensitive |
+|----------|------|----------|----------|-----------|
+| `secret_id` | string | ✅ | | |
+| `username` | string | | ✅ | |
+| `password` | string | | ✅ | ✅ |
 
-# Publish gerando binário estático para o Terraform
-RUN dotnet publish -c Release -r linux-musl-x64 -o /app/publish \
-    -p:PublishAot=true -p:StaticExecutable=true
+**Arquivos:**
+- `Models/CredentialData.cs`
+- `Services/DataSources/CredentialDataSourceHandler.cs`
+- `Serialization/Json.cs` (registrado)
+- `Program.cs` (registrado no DI)
+- `AppHost/__admin/mappings/secrets-get.json` (WireMock)
 
-```
-
----
-
-## 📦 3. Empacotamento para o Registry
-
-O Terraform Registry exige uma estrutura de arquivos e nomenclatura rígida para o `terraform init` funcionar.
-
-### Convenção de Nomes
-
-* **Binário:** `terraform-provider-{nome}_{versao}_{os}_{arch}`
-* **Zip:** `terraform-provider-{nome}_{versao}_{os}_{arch}.zip`
-
-### Script de Automação (Bash)
-
-Este script gera os hashes necessários para a release:
-
-```bash
-#!/bin/bash
-NAME="meu-provedor"
-VERSION="1.0.0"
-
-# 1. Zipar os binários
-zip "terraform-provider-${NAME}_${VERSION}_linux_amd64.zip" terraform-provider-${NAME}
-
-# 2. Gerar SHA256SUMS
-sha256sum *.zip > "terraform-provider-${NAME}_${VERSION}_SHA256SUMS"
-
-# 3. Assinar com GPG (Exige que você tenha uma chave configurada)
-gpg --detach-sign "terraform-provider-${NAME}_${VERSION}_SHA256SUMS"
-
-```
+**Testes:**
+- ✅ `CredentialDataTests.cs` — 5 testes de schema
+- ✅ `CredentialDataSourceHandlerTests.cs` — 4 testes unitários (happy path + erros SignAppin/GetSecret/Signout)
+- ✅ `IntegrationTests.cs` — 3 testes (GetSchema + ReadDataSource msgpack + JSON)
 
 ---
 
-## ✅ 4. Checklist de Recuperação
+### ✅ 2. `secretsafe_download_file_data` — COMPLETO
 
-Ao retomar este projeto, verifique:
+**API:** `GET /Secrets-Safe/Secrets/{secretId:guid}/file/download`
 
-1. **Handshake:** A string `1|5|tcp|...` está sendo a primeira coisa impressa no console?
-2. **Arquivos Proto:** Você importou os `.proto` da V5 (tf680) e os compilou com o `Grpc.Tools`?
-3. **Linkagem:** Rodou `ldd` no binário final para garantir que ele é `statically linked`?
-4. **GPG:** Sua chave pública está cadastrada no Terraform Registry?
+**Descrição:** Faz download do conteúdo binário de um arquivo armazenado como segredo no Secret Safe. A API retorna `Content-Type: application/octet-stream` com o arquivo como attachment. O header `Content-Disposition` contém o nome do arquivo. O conteúdo é retornado em base64 pois o Terraform não suporta valores binários nativamente.
+
+**Refit:** `IBeyondTrustSecretSafe.DownloadSecret(Guid secretId)` → `Task<HttpResponseMessage>`
+
+**Schema Terraform:**
+| Atributo | Tipo | Required | Computed | Sensitive |
+|----------|------|----------|----------|-----------|
+| `secret_id` | string | ✅ | | |
+| `file_name` | string | | ✅ | |
+| `file_content_base64` | string | | ✅ | ✅ |
+
+**Arquivos:**
+- `Models/FileDownloadData.cs`
+- `Services/DataSources/FileDownloadDataSourceHandler.cs`
+- `Serialization/Json.cs` (registrado)
+- `Program.cs` (registrado no DI)
+- `AppHost/__admin/mappings/secrets-download.json` (WireMock)
+
+**Testes:**
+- ✅ `FileDownloadDataTests.cs` — 5 testes de schema
+- ✅ `FileDownloadDataSourceHandlerTests.cs` — 4 testes unitários (happy path + erros SignAppin/DownloadSecret/Signout)
+- ✅ `IntegrationTests.cs` — 3 testes (GetSchema + ReadDataSource msgpack + JSON)
 
 ---
 
-**Status do Handoff:** Pronto para arquivamento.
-Deseja que eu escreva um exemplo de implementação para o método `GetSchema` do Protocolo V5 antes de encerrarmos?
+### ⬜ 3. `secretsafe_text_data` — PENDENTE
+
+**API:** `GET /Secrets-Safe/Secrets/{secretId:guid}/text`
+
+**Descrição:** Recupera o conteúdo de texto de um segredo do tipo "text" no Secret Safe. A API retorna um JSON com o campo `Text` contendo o conteúdo do segredo.
+
+**Schema Terraform proposto:**
+| Atributo | Tipo | Required | Computed | Sensitive |
+|----------|------|----------|----------|-----------|
+| `secret_id` | string | ✅ | | |
+| `title` | string | | ✅ | |
+| `text` | string | | ✅ | ✅ |
+
+**Artefatos necessários:**
+
+1. **Refit:** Adicionar `GetSecretText(Guid secretId)` em `IBeyondTrustSecretSafe.cs`
+   - `[Get("/public/v3/Secrets-Safe/Secrets/{secretId}/text")]`
+   - Retorno: `Task<SecretTextValue>` (novo record)
+
+2. **Model response:** `Models/SecretTextValue.cs` — `record SecretTextValue(string Title, string Text)`
+
+3. **Model:** `Models/TextSecretData.cs`
+   - Classe `[MessagePackObject]` com `SecretId`, `Title`, `Text`
+   - Método estático `GetSchema()`
+
+4. **Handler:** `Services/DataSources/TextSecretDataSourceHandler.cs`
+   - `TypeName = "secretsafe_text_data"`
+   - Fluxo: SignAppin → GetSecretText → Signout
+
+5. **Serialização:** Registrar `[JsonSerializable(typeof(TextSecretData))]` e `[JsonSerializable(typeof(SecretTextValue))]` em `Serialization/Json.cs`
+
+6. **DI:** Registrar handler em `Program.cs`
+
+7. **WireMock:** `AppHost/__admin/mappings/secrets-text.json`
+   - PathPattern: `^/public/v3/Secrets-Safe/Secrets/[0-9a-fA-F\\-]+/text$`
+   - Response: `{ "Title": "My Test Text Secret", "Text": "secret-text-content-from-wiremock" }`
+
+**Testes unitários necessários:**
+
+8. **`TextSecretDataTests.cs`** — 5 testes de schema
+9. **`TextSecretDataSourceHandlerTests.cs`** — 4 testes unitários (happy path + 3 erros)
+
+**Testes de integração necessários:**
+
+10. **`IntegrationTests.cs`** — 3 testes adicionais (GetSchema + ReadDataSource msgpack + JSON)
+
+---
+
+### ⬜ 4. `secretsafe_file_metadata_data` — PENDENTE
+
+**API:** `GET /Secrets-Safe/Secrets/{secretId:guid}/file`
+
+**Descrição:** Recupera os **metadados** de um arquivo secreto (sem o conteúdo binário). Retorna informações como `FileName`, `FileHash`, `Title`, `Description`.
+
+**Schema Terraform proposto:**
+| Atributo | Tipo | Required | Computed | Sensitive |
+|----------|------|----------|----------|-----------|
+| `secret_id` | string | ✅ | | |
+| `title` | string | | ✅ | |
+| `file_name` | string | | ✅ | |
+| `file_hash` | string | | ✅ | |
+| `description` | string | | ✅ | |
+
+**Artefatos necessários:**
+
+1. **Refit:** Adicionar `GetSecretFileMetadata(Guid secretId)` em `IBeyondTrustSecretSafe.cs`
+   - `[Get("/public/v3/Secrets-Safe/Secrets/{secretId}/file")]`
+   - Retorno: `Task<SecretFileMetadata>` (novo record)
+
+2. **Model response:** `Models/SecretFileMetadata.cs` — `record SecretFileMetadata(string Title, string Description, string FileName, string FileHash)`
+
+3. **Model:** `Models/FileMetadataData.cs`
+   - Classe `[MessagePackObject]` com `SecretId`, `Title`, `FileName`, `FileHash`, `Description`
+   - Método estático `GetSchema()`
+
+4. **Handler:** `Services/DataSources/FileMetadataDataSourceHandler.cs`
+   - `TypeName = "secretsafe_file_metadata_data"`
+   - Fluxo: SignAppin → GetSecretFileMetadata → Signout
+
+5. **Serialização, DI, WireMock, Testes** — seguir mesmo padrão das tasks anteriores
+
+---
+
+### ⬜ 5. `secretsafe_secrets_list_data` — PENDENTE
+
+**API:** `GET /Secrets-Safe/Secrets` (com query params opcionais: Path, Title, Limit, Offset)
+
+**Descrição:** Lista segredos disponíveis no Secret Safe, com filtros opcionais. Útil para descoberta de segredos em automações Terraform.
+
+**Schema Terraform proposto:**
+| Atributo | Tipo | Required | Computed | Sensitive |
+|----------|------|----------|----------|-----------|
+| `path` | string | | | |
+| `title` | string | | | |
+| `secrets` | list(object) | | ✅ | |
+
+> Cada objeto em `secrets` contém: `id`, `title`, `username`, `folder_path`
+
+**Complexidade:** Média-alta (requer tipo list/object no schema Terraform)
+
+---
+
+### ⬜ 6. `secretsafe_folder_data` — PENDENTE
+
+**API:** `GET /Secrets-Safe/Folders/{id}`
+
+**Descrição:** Recupera informações de uma pasta do Secret Safe por ID.
+
+**Schema Terraform proposto:**
+| Atributo | Tipo | Required | Computed | Sensitive |
+|----------|------|----------|----------|-----------|
+| `folder_id` | string | ✅ | | |
+| `name` | string | | ✅ | |
+| `description` | string | | ✅ | |
+| `parent_id` | string | | ✅ | |
+
+---
+
+## Prioridade de Implementação
+
+| # | Data Source | Prioridade | Justificativa |
+|---|-----------|------------|---------------|
+| 1 | ✅ `secretsafe_credential_data` | — | Já implementado |
+| 2 | ✅ `secretsafe_download_file_data` | — | Já implementado |
+| 3 | ⬜ `secretsafe_text_data` | **Alta** | Texto secreto (notas, tokens, API keys em texto) |
+| 4 | ⬜ `secretsafe_file_metadata_data` | **Média** | Metadados de arquivo (útil para verificação de hash) |
+| 5 | ⬜ `secretsafe_secrets_list_data` | **Baixa** | Listagem/descoberta de segredos |
+| 6 | ⬜ `secretsafe_folder_data` | **Baixa** | Informações de pasta |
+
+---
+
+## Referência Técnica
+
+### Arquivos-chave do projeto
+
+| Arquivo | Propósito |
+|---------|-----------|
+| `Program.cs` | Entry point, DI, Kestrel, handshake |
+| `Services/Terraform5ProviderService.cs` | gRPC service principal (despacha para handlers) |
+| `Services/DataSources/IDataSourceHandler.cs` | Interface de data source |
+| `Services/IBeyondTrustSecretSafe.cs` | Interface Refit (API REST) |
+| `Services/BeyondTrustApiFactory.cs` | Factory para criar clientes API |
+| `Serialization/Json.cs` | JsonSerializerContext (AOT-safe) |
+| `Serialization/SmartSerializer.cs` | Serialização msgpack/JSON unificada |
+| `Models/TfTypes.cs` | Tipos Terraform (String) |
+
+### Convenções de teste
+
+- **Framework:** TUnit
+- **Mock:** Imposter (source-generated)
+- **Padrão:** AAA (Arrange-Act-Assert)
+- **SUT:** Variável sempre nomeada `_sut`
+- **Integração:** Aspire Testing Framework com WireMock
+
+### Documentação da API
+
+- **Referência completa:** `bi-ps-api-24-1.pdf` (BeyondInsight and Password Safe 24.1 API Guide)
+- **Seção relevante:** "Secrets Safe APIs" (páginas 430-457)
