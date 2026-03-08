@@ -111,9 +111,21 @@ BeyondTrust.SecretSafeProvider.AppHost/
     ├── secrets-get.json
     └── secrets-download.json
 
+BeyondTrust.SecretSafeProvider.Tests/
+├── Imposters.cs                      # [assembly: GenerateImposter] declarations
+├── CredentialDataTests.cs            # CredentialData.GetSchema() assertions
+├── CredentialDataSourceHandlerTests.cs
+├── Terraform5ProviderServiceTests.cs
+├── BeyondTrustApiFactoryTests.cs
+├── CertificateGeneratorTests.cs
+├── IntegrationTests.cs               # End-to-end via Aspire.Hosting.Testing
+└── Protos/
+    └── tfplugin5.2.proto             # Proto for gRPC client generation (tests only)
+
 terraform/
 └── main.tf                           # Local dev Terraform config
 
+cake.cs                               # Cake build script (Build / Test / Coverage tasks)
 Dockerfile.test                       # Multistage: AOT build + terraform plan
 publish-dev.ps1                       # Windows dev publish script
 ```
@@ -202,6 +214,54 @@ provider_installation {
 ```
 
 > **Provider local name**: The Terraform config uses `secretsafe` as the provider local name (matching the `secretsafe_` prefix of all data sources). The registry source address remains `beyondtrust/secretsafe`.
+
+---
+
+## Testing
+
+### Stack
+
+| Concern | Library |
+|---|---|
+| Test framework | [TUnit](https://github.com/thomhurst/TUnit) — `Microsoft.Testing.Platform`-based, runs via `dotnet run` (not `dotnet test`) |
+| Mocking | [Imposter](https://github.com/themidnightgospel/Imposter) — source-generated mocks declared with `[assembly: GenerateImposter(typeof(...))]` |
+| Integration | [Aspire.Hosting.Testing](https://learn.microsoft.com/en-us/dotnet/aspire/testing/write-your-first-test) — spins up the full Aspire app (provider + WireMock) in-process |
+
+### Running tests
+
+```bash
+# Run tests only
+dotnet run --project BeyondTrust.SecretSafeProvider.Tests/BeyondTrust.SecretSafeProvider.Tests.csproj
+
+# Run tests + collect Cobertura coverage + generate HTML report
+dotnet run cake.cs --target Coverage
+# Report written to: coverage-report/index.html
+```
+
+### Unit tests
+
+Each class has a dedicated test file following the `Method_Condition_Result` naming convention and the AAA (Arrange / Act / Assert) pattern. The class under test is always named `_sut`.
+
+| Test class | What it covers |
+|---|---|
+| `Terraform5ProviderServiceTests` | `GetSchema`, `Configure`, `ReadDataSource` (happy path + unknown type + handler throws), all pass-through and stub RPCs |
+| `CredentialDataSourceHandlerTests` | `ReadAsync` happy path, `SignAppin` throws, `GetSecret` throws, `Signout` throws |
+| `CredentialDataTests` | `GetSchema()` — schema version, attribute count, required/computed/sensitive flags |
+| `CertificateGeneratorTests` | Subject name, private key presence, validity window, RSA key size, DER export |
+| `BeyondTrustApiFactoryTests` | `CreateApi()` with provider config URL, with `IConfiguration` URL, distinct instances per call |
+
+### Integration tests
+
+`IntegrationTests` uses `Aspire.Hosting.Testing` to start the full application stack in-process — the .NET provider and a WireMock container with pre-loaded mappings — then connects a real gRPC client and calls `ReadDataSource` end-to-end.
+
+```
+IntegrationTests
+└── ReadDataSource_WithCredentialDataRequest_ReturnsSecretFromProvider
+      ↓ starts Aspire app (provider + WireMock)
+      ↓ creates GrpcChannel pointing at the "direct" endpoint
+      ↓ calls Provider.ReadDataSource with a CredentialData request
+      ↓ asserts username, password, and secretId in the response
+```
 
 ---
 
