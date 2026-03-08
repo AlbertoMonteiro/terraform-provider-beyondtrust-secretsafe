@@ -30,7 +30,12 @@
       "Bash(git add .github/workflows/ci.yml)",
       "Bash(dotnet run --project .BeyondTrust.SecretSafeProvider.TestsBeyondTrust.SecretSafeProvider.Tests.csproj --configuration Release)",
       "Bash(dotnet run --project BeyondTrust.SecretSafeProvider.Tests/BeyondTrust.SecretSafeProvider.Tests.csproj --configuration Release)",
-      "Bash(echo \"Exit code: $?\")"
+      "Bash(echo \"Exit code: $?\")",
+      "WebFetch(domain:tunit.dev)",
+      "Bash(dotnet build BeyondTrust.SecretSafeProvider.Tests/BeyondTrust.SecretSafeProvider.Tests.csproj)",
+      "Bash(dotnet list BeyondTrust.SecretSafeProvider.Tests package --include-transitive)",
+      "Read(//c/Users/alber/.nuget/packages/aspire.hosting.testing/13.1.2/**)",
+      "Read(//c/Users/alber/.nuget/packages/aspire.hosting/13.1.2/**)"
     ]
   }
 }
