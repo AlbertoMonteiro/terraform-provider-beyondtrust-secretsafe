@@ -8,7 +8,8 @@ public class CredentialDataSourceHandler(
     IBeyondTrustApiFactory apiFactory,
     ProviderConfiguration configuration) : IDataSourceHandler
 {
-    public string TypeName => "secretsafe_credential_data";
+    public const string TYPE_NAME = "secretsafe_credential_data";
+    public string TypeName => TYPE_NAME;
 
     public Schema GetSchema() => CredentialData.GetSchema();
 

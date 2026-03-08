@@ -27,7 +27,7 @@ public class CredentialDataSourceHandlerTests
     }
 
     [Test]
-    public async Task GetSchema_WithRegisteredHandler_ReturnsSchemaForHandlerAndProvider()
+    public async Task ReadAsync_WithValidCredential_ReturnsPopulatedCredentialData()
     {
         //Arrange
         var secretId = Guid.NewGuid();

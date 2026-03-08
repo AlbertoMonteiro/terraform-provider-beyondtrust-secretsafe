@@ -27,7 +27,10 @@
       "Bash(dotnet run cake.cs --target Coverage)",
       "Bash(dotnet tool restore)",
       "Bash(git add BeyondTrust.SecretSafeProvider.Tests/Terraform5ProviderServiceTests.cs BeyondTrust.SecretSafeProvider.Tests/BeyondTrustApiFactoryTests.cs BeyondTrust.SecretSafeProvider.Tests/CertificateGeneratorTests.cs BeyondTrust.SecretSafeProvider.Tests/CredentialDataTests.cs cake.cs BeyondTrust.SecretSafeProvider/Serialization/Json.cs BeyondTrust.SecretSafeProvider/Serialization/MessagePackResolverPlaceholder.cs)",
-      "Bash(git add .github/workflows/ci.yml)"
+      "Bash(git add .github/workflows/ci.yml)",
+      "Bash(dotnet run --project .BeyondTrust.SecretSafeProvider.TestsBeyondTrust.SecretSafeProvider.Tests.csproj --configuration Release)",
+      "Bash(dotnet run --project BeyondTrust.SecretSafeProvider.Tests/BeyondTrust.SecretSafeProvider.Tests.csproj --configuration Release)",
+      "Bash(echo \"Exit code: $?\")"
     ]
   }
 }
