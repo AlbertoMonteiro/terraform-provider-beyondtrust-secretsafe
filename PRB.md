@@ -450,21 +450,21 @@ Base: `/public/v3`
 
 ---
 
-## Prioridade de Implementação
+## Lista de Implementação
 
-| # | Item | Prioridade | Justificativa |
-|---|------|-----------|---------------|
-| 1 | ✅ `secretsafe_credential_data` | — | Já implementado |
-| 2 | ✅ `secretsafe_download_file_data` | — | Já implementado |
-| 3 | ⬜ `secretsafe_text_data` | **Alta** | Texto secreto (notas, tokens, API keys em texto) |
-| 4 | ⬜ `secretsafe_file_metadata_data` | **Média** | Metadados de arquivo (útil para verificação de hash) |
-| 5 | ⬜ `secretsafe_secrets_list_data` | **Baixa** | Listagem/descoberta de segredos |
-| 6 | ⬜ `secretsafe_folder_data` (data source) | **Baixa** | Informações de pasta (leitura) |
-| 7 | ⬜ `secretsafe_folders_list_data` (data source) | **Baixa** | Listar pastas com filtros |
-| 8 | ⬜ `secretsafe_folder` (resource CRUD) | **Média** | Gerenciar pastas (criar, atualizar, deletar) |
-| 9 | ⬜ `secretsafe_folder_secrets_list_data` (data source) | **Média** | Listar secrets dentro de uma pasta |
-| 10 | ✅ `secretsafe_folder_credential` (resource) | **Alta** | Já implementado |
-| 11 | ✅ `secretsafe_folder_file` (resource) | **Alta** | Já implementado |
+| # | Status | Item | Tipo | Justificativa |
+|---||--- ||--- ||---||---|
+| 1 | ✅ | `secretsafe_credential_data` | (data source) | Já implementado |
+| 2 | ✅ | `secretsafe_download_file_data` | (data source) | Já implementado |
+| 3 | ⬜ | `secretsafe_text_data` | (data source) | Texto secreto (notas, tokens, API keys em texto) |
+| 4 | ⬜ | `secretsafe_file_metadata_data` | (data source) | Metadados de arquivo (útil para verificação de hash) |
+| 5 | ⬜ | `secretsafe_secrets_list_data` | (data source) | Listagem/descoberta de segredos |
+| 6 | ⬜ | `secretsafe_folder_data` | (data source) | Informações de pasta (leitura) |
+| 7 | ⬜ | `secretsafe_folders_list_data` | (data source) | Listar pastas com filtros |
+| 8 | ⬜ | `secretsafe_folder` | (resource CRUD) | Gerenciar pastas (criar, atualizar, deletar) |
+| 9 | ⬜ | `secretsafe_folder_secrets_list_data` | (data source) | Listar secrets dentro de uma pasta |
+| 10 | ✅ | `secretsafe_folder_credential` | (resource) | Já implementado |
+| 11 | ✅ | `secretsafe_folder_file` | (resource) | Já implementado |
 
 ---
 
