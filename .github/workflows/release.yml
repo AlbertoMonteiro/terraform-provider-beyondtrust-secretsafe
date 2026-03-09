@@ -90,7 +90,7 @@ jobs:
           ZIPNAME="${BINARY}_${VERSION}_${{ matrix.os }}_${{ matrix.arch }}.zip"
 
           cp "dist/${{ matrix.os }}_${{ matrix.arch }}/${BINARY}" "${BINARY_VERSIONED}"
-          zip "${ZIPNAME}" "${BINARY_VERSIONED}"
+          zip "${ZIPNAME}" "${BINARY_VERSIONED}" LICENSE README.md
           rm "${BINARY_VERSIONED}"
           echo "Built: ${ZIPNAME}"
 
@@ -105,7 +105,7 @@ jobs:
           $src     = "dist\${{ matrix.os }}_${{ matrix.arch }}\${binary}.exe"
 
           Copy-Item -Path $src -Destination $binaryVersioned
-          Compress-Archive -Path $binaryVersioned -DestinationPath $zipName
+          Compress-Archive -Path $binaryVersioned, LICENSE, README.md -DestinationPath $zipName
           Remove-Item -Path $binaryVersioned
           Write-Host "Built: $zipName"
 
