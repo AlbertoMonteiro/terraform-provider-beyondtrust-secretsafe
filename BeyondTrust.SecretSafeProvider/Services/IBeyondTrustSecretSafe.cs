@@ -22,6 +22,13 @@ public interface IBeyondTrustSecretSafe
     [Put($"{V3}/Secrets-Safe/Secrets/{{secretId}}")]
     public Task<SecretResponse> UpdateCredentialSecret(string secretId, [Body] CreateSecretCredentialRequest request);
 
+    [Multipart]
+    [Post($"{V3}/Secrets-Safe/Folders/{{folderId}}/secrets/file")]
+    public Task<SecretResponse> CreateFileSecret(
+        string folderId,
+        [AliasAs("SecretMetadata")] CreateSecretFileRequest metadata,
+        [AliasAs("File")] StreamPart file);
+
     [Post($"{V3}/Auth/Signout")]
     public Task<ApiResponse<HttpResponseMessage>> Signout();
 }

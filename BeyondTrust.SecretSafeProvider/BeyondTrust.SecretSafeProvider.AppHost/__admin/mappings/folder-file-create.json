@@ -1,0 +1,27 @@
+{
+  "Guid": "a1b2c3d4-0006-0000-0000-000000000006",
+  "Priority": 10,
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "RegexMatcher",
+          "Pattern": "^/public/v3/Secrets-Safe/Folders/[0-9a-fA-F\\-]+/secrets/file$"
+        }
+      ]
+    },
+    "Methods": [ "POST" ]
+  },
+  "Response": {
+    "StatusCode": 201,
+    "BodyAsJson": {
+      "Id": "4g44g3d3-f7e4-6c39-de12-3456789012cd",
+      "Title": "Test File Secret",
+      "Description": "Test file secret from WireMock",
+      "OwnerId": 1
+    },
+    "Headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

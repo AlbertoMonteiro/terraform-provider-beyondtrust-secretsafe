@@ -35,6 +35,7 @@ builder.Services.AddSingleton(emptyConfiguration);
 builder.Services.AddSingleton<IDataSourceHandler, CredentialDataSourceHandler>();
 builder.Services.AddSingleton<IDataSourceHandler, FileDownloadDataSourceHandler>();
 builder.Services.AddSingleton<IResourceHandler, FolderCredentialResourceHandler>();
+builder.Services.AddSingleton<IResourceHandler, FolderFileSecretResourceHandler>();
 
 var app = builder.Build();
 
