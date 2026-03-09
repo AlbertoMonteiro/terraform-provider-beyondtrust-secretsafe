@@ -8,7 +8,7 @@ public interface IBeyondTrustSecretSafe
     private const string V3 = "/public/v3";
 
     [Post($"{V3}/Auth/SignAppin")]
-    public Task<ApiResponse<HttpResponseMessage>> SignAppin([Authorize("PS-Auth")] KeyAndRunAs keyAndRunAs);
+    public Task<SignAppinResponse> SignAppin([Authorize("PS-Auth")] KeyAndRunAs keyAndRunAs);
 
     [Get($"{V3}/Secrets-Safe/Secrets/{{secretId}}")]
     public Task<SecretValue> GetSecret(Guid secretId);

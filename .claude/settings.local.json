@@ -21,7 +21,8 @@
       "Bash(unzip:*)",
       "Bash(gpg:*)",
       "Bash(git tag:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
