@@ -24,16 +24,12 @@ jobs:
           # arm64 uses a native ARM64 runner to avoid QEMU (ILC crashes under emulation)
           - { os: linux,   arch: amd64, rid: linux-musl-x64,   platform: linux/amd64,  runner: ubuntu-latest,    use_qemu: false }
           - { os: linux,   arch: arm64, rid: linux-musl-arm64,  platform: linux/arm64,  runner: ubuntu-24.04-arm, use_qemu: false }
-          - { os: linux,   arch: arm,   rid: linux-musl-arm,   platform: linux/arm/v7, runner: ubuntu-latest,    use_qemu: true  }
-          - { os: linux,   arch: "386", rid: linux-musl-x86,   platform: linux/386,    runner: ubuntu-latest,    use_qemu: true  }
           # macOS (native runners, no Docker)
           - { os: darwin,  arch: amd64, rid: osx-x64,         runner: macos-13        }
           - { os: darwin,  arch: arm64, rid: osx-arm64,        runner: macos-latest    }
           # Windows (cross-compile from windows-latest)
           - { os: windows, arch: amd64, rid: win-x64,          runner: windows-latest  }
           - { os: windows, arch: arm64, rid: win-arm64,         runner: windows-latest  }
-          - { os: windows, arch: "386", rid: win-x86,          runner: windows-latest  }
-          - { os: windows, arch: arm,   rid: win-arm,          runner: windows-latest  }
 
     steps:
       - name: Checkout
@@ -41,7 +37,7 @@ jobs:
 
       # ── Linux ──────────────────────────────────────────────────────────────
 
-      - name: Set up QEMU (arm/386 cross-build)
+      - name: Set up QEMU (cross-build)
         if: matrix.use_qemu
         uses: docker/setup-qemu-action@v3
 
