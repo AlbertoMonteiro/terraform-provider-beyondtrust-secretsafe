@@ -17,6 +17,84 @@ O provider implementa o padrão **Strategy** para Data Sources via `IDataSourceH
 5. **WireMock mapping** (`AppHost/__admin/mappings/`) — mock para testes de integração
 6. **Testes unitários** — Handler tests + Schema tests (TUnit + Imposter)
 7. **Testes de integração** — Via Aspire (GetSchema + ReadDataSource msgpack + JSON)
+8. **Documentação** (`docs/`) — Arquivo markdown para Terraform Registry
+
+### Documentação para Terraform Registry
+
+A documentação é essencial para o provider aparecer corretamente no Terraform Registry (https://registry.terraform.io/). Cada data source e resource deve ter um arquivo `.md` correspondente na pasta `docs/`.
+
+**Estrutura de pastas:**
+```
+docs/
+├── index.md                          (descrição geral do provider)
+├── data-sources/
+│   ├── secretsafe_credential_data.md
+│   ├── secretsafe_download_file_data.md
+│   └── ... (novos data sources)
+└── resources/
+    ├── secretsafe_folder.md
+    ├── secretsafe_folder_credential.md
+    ├── secretsafe_folder_file.md
+    └── ... (novos resources)
+```
+
+**Formato de documentação — Data Source:**
+```markdown
+# Data Source: {name}
+
+{Descrição breve}
+
+## Example
+
+\`\`\`hcl
+data "{name}" "{example_name}" {
+  {argument} = "{value}"
+}
+
+output "result" {
+  value = data.{name}.{example_name}.{attribute}
+}
+\`\`\`
+
+## Arguments
+
+- \`{argument1}\` - (Required/Optional) {Descrição}
+- \`{argument2}\` - (Optional) {Descrição}
+
+## Attributes
+
+- \`{computed_attr1}\` - (Computed) {Descrição}
+- \`{computed_attr2}\` - (Computed, Sensitive) {Descrição}
+```
+
+**Formato de documentação — Resource:**
+```markdown
+# Resource: {name}
+
+{Descrição breve}
+
+## Example
+
+\`\`\`hcl
+resource "{name}" "example" {
+  {required_arg} = "{value}"
+  {optional_arg} = "{value}"
+}
+\`\`\`
+
+## Arguments
+
+- \`{required_arg}\` - (Required) {Descrição}
+- \`{optional_arg}\` - (Optional) {Descrição}
+
+## Attributes
+
+- \`id\` - (Computed) Identificador único do recurso
+```
+
+**Padrão de nomeclatura:**
+- Data source: `docs/data-sources/{terraform-name}.md`
+- Resource: `docs/resources/{terraform-name}.md`
 
 ### API BeyondTrust Secret Safe v3
 
@@ -63,6 +141,7 @@ Base: `/public/v3`
 - `Serialization/Json.cs` (registrado)
 - `Program.cs` (registrado no DI)
 - `AppHost/__admin/mappings/secrets-get.json` (WireMock)
+- ✅ `docs/data-sources/secretsafe_credential_data.md` (documentação para Terraform Registry)
 
 **Testes:**
 - ✅ `CredentialDataTests.cs` — 5 testes de schema
@@ -92,6 +171,7 @@ Base: `/public/v3`
 - `Serialization/Json.cs` (registrado)
 - `Program.cs` (registrado no DI)
 - `AppHost/__admin/mappings/secrets-download.json` (WireMock)
+- ✅ `docs/data-sources/secretsafe_download_file_data.md` (documentação para Terraform Registry)
 
 **Testes:**
 - ✅ `FileDownloadDataTests.cs` — 5 testes de schema
@@ -137,6 +217,8 @@ Base: `/public/v3`
    - PathPattern: `^/public/v3/Secrets-Safe/Secrets/[0-9a-fA-F\\-]+/text$`
    - Response: `{ "Title": "My Test Text Secret", "Text": "secret-text-content-from-wiremock" }`
 
+8. **Documentação:** `docs/data-sources/secretsafe_text_data.md` — Documentação para Terraform Registry
+
 **Testes unitários necessários:**
 
 8. **`TextSecretDataTests.cs`** — 5 testes de schema
@@ -181,6 +263,8 @@ Base: `/public/v3`
 
 5. **Serialização, DI, WireMock, Testes** — seguir mesmo padrão das tasks anteriores
 
+6. **Documentação:** `docs/data-sources/secretsafe_file_metadata_data.md` — Documentação para Terraform Registry
+
 ---
 
 ### ⬜ 5. `secretsafe_secrets_list_data` — PENDENTE
@@ -199,6 +283,8 @@ Base: `/public/v3`
 > Cada objeto em `secrets` contém: `id`, `title`, `username`, `folder_path`
 
 **Complexidade:** Média-alta (requer tipo list/object no schema Terraform)
+
+**Documentação necessária:** `docs/data-sources/secretsafe_secrets_list_data.md`
 
 ---
 
@@ -226,6 +312,7 @@ Base: `/public/v3`
 6. **DI:** Registrar em `Program.cs`
 7. **WireMock:** `AppHost/__admin/mappings/folders-get.json`
 8. **Testes:** Schema tests + handler unit tests + integration tests
+9. **Documentação:** `docs/data-sources/secretsafe_folder_data.md` — Documentação para Terraform Registry
 
 ---
 
@@ -253,6 +340,7 @@ Base: `/public/v3`
 3. **Model:** `Models/FoldersListData.cs` — com lista de folders e método `GetSchema()`
 4. **Handler:** `Services/DataSources/FoldersListDataSourceHandler.cs` — `TypeName = "secretsafe_folders_list_data"`
 5. **Serialização, DI, WireMock, Testes** — seguir padrão das data sources anteriores
+6. **Documentação:** `docs/data-sources/secretsafe_folders_list_data.md` — Documentação para Terraform Registry
 
 ---
 
@@ -317,6 +405,8 @@ Base: `/public/v3`
 
 9. **Testes de integração:** via Aspire (ApplyResourceChange msgpack + JSON para CRUD)
 
+10. **Documentação:** ⬜ `docs/resources/secretsafe_folder.md` — Documentação para Terraform Registry
+
 ---
 
 ### ⬜ 9. `secretsafe_folder_secrets_list_data` — PENDENTE
@@ -339,6 +429,7 @@ Base: `/public/v3`
 3. **Model:** `Models/FolderSecretsListData.cs` — com método `GetSchema()`
 4. **Handler:** `Services/DataSources/FolderSecretsListDataSourceHandler.cs` — `TypeName = "secretsafe_folder_secrets_list_data"`
 5. **Serialização, DI, WireMock, Testes** — seguir padrão das data sources anteriores
+6. **Documentação:** `docs/data-sources/secretsafe_folder_secrets_list_data.md` — Documentação para Terraform Registry
 
 ---
 
@@ -394,6 +485,8 @@ Base: `/public/v3`
 
 9. **Testes de integração:** via Aspire (ApplyResourceChange msgpack + JSON para CRUD)
 
+10. **Documentação:** ⬜ `docs/resources/secretsafe_folder_credential.md` — Documentação para Terraform Registry
+
 ---
 
 ### ✅ 11. `secretsafe_folder_file` — NOVO RESOURCE (CREATE) — COMPLETO
@@ -447,6 +540,8 @@ Base: `/public/v3`
    - `FolderFileSecretResourceHandlerTests.cs` — unit tests (multipart, base64 encoding/decoding)
 
 9. **Testes de integração:** via Aspire (ApplyResourceChange com multipart form-data)
+
+10. **Documentação:** ⬜ `docs/resources/secretsafe_folder_file.md` — Documentação para Terraform Registry
 
 ---
 

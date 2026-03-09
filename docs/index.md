@@ -11,6 +11,12 @@ The BeyondTrust Secret Safe provider allows you to manage and retrieve secrets f
 - `secretsafe_credential_data` — Retrieve username/password credentials from a secret
 - `secretsafe_download_file_data` — Download file content from a secret as base64
 
+## Supported Resources
+
+- `secretsafe_folder` — Create, read, update, and delete folders in Secret Safe
+- `secretsafe_folder_credential` — Create and manage credentials within Secret Safe folders
+- `secretsafe_folder_file` — Upload and manage files within Secret Safe folders
+
 ## Provider Configuration
 
 The provider requires the following arguments:
