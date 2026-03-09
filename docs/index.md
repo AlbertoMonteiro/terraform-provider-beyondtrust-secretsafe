@@ -24,6 +24,7 @@ The provider requires the following arguments:
 - `runas` - (Required, String) User to authenticate in BeyondTrust Secret Safe
 - `key` - (Required, String, Sensitive) The API key of BeyondTrust Secret Safe
 - `baseUrl` - (Required, String) Base URL of BeyondTrust Secret Safe instance
+- `pwd` - (Optional, String, Sensitive) Domain password for authentication (if using domain credentials)
 
 ## Example Usage
 
@@ -40,6 +41,7 @@ provider "secretsafe" {
   runas   = "myuser"
   key     = var.secret_safe_api_key
   baseUrl = "https://secretsafe.example.com"
+  pwd     = var.secret_safe_password  # Optional: domain password
 }
 
 # Retrieve credential data

@@ -26,9 +26,10 @@ resource "aws_db_instance" "example" {
 
 ## Arguments
 
-- `secret_id` - (Required) The UUID of the secret in BeyondTrust Secret Safe
+- `secret_id` - (Required, String) The UUID of the secret in BeyondTrust Secret Safe
 
 ## Attributes
 
-- `username` - (Computed) The username from the credential secret
-- `password` - (Computed, Sensitive) The password from the credential secret
+- `secret_id` - (String) The secret ID
+- `username` - (String) The username from the credential secret
+- `password` - (String, Sensitive) The password from the credential secret

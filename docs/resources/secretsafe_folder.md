@@ -19,14 +19,18 @@ output "folder_id" {
 
 ## Arguments
 
-- `name` - (Required) The name of the folder. Must be unique within the parent folder.
-- `description` - (Optional) A description of the folder's purpose.
-- `parent_id` - (Optional) The ID of the parent folder. If not specified, the folder is created at the root level.
-- `user_group_id` - (Required) The ID of the user group that owns this folder. This determines access permissions.
+- `name` - (Required, String) The name of the folder. Must be unique within the parent folder.
+- `description` - (Optional, String) A description of the folder's purpose.
+- `parent_id` - (Optional, String) The ID of the parent folder. If not specified, the folder is created at the root level.
+- `user_group_id` - (Optional, Number) The ID of the user group that owns this folder. This determines access permissions.
 
 ## Attributes
 
-- `id` - (Computed) The unique identifier of the folder in Secret Safe format.
+- `id` - (String, Computed) The unique identifier of the folder in Secret Safe format.
+- `name` - (String) The folder name
+- `description` - (String) The folder description
+- `parent_id` - (String) Parent folder UUID
+- `user_group_id` - (Number) The user group ID
 
 ## Notes
 

@@ -26,9 +26,10 @@ locals {
 
 ## Arguments
 
-- `secret_id` - (Required) The UUID of the secret file in BeyondTrust Secret Safe
+- `secret_id` - (Required, String) The UUID of the secret file in BeyondTrust Secret Safe
 
 ## Attributes
 
-- `file_name` - The name of the file as stored in Secret Safe
-- `file_content_base64` - The file content encoded as base64 (base64 encoding is used because Terraform does not support binary values)
+- `secret_id` - (String) The secret ID
+- `file_name` - (String) The name of the file as stored in Secret Safe
+- `file_content_base64` - (String, Sensitive) The file content encoded as base64 (base64 encoding is used because Terraform does not support binary values)

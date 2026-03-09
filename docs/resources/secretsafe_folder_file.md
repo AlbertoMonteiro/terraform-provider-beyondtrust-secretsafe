@@ -16,7 +16,6 @@ resource "secretsafe_folder_file" "ssl_cert" {
   description          = "SSL/TLS certificate for production web server"
   file_name            = "prod-server.crt"
   file_content_base64  = filebase64("${path.module}/certs/prod-server.crt")
-  owner_id             = 5
 }
 
 output "file_secret_id" {
@@ -27,17 +26,23 @@ output "file_secret_id" {
 
 ## Arguments
 
-- `folder_id` - (Required) The ID of the folder where the file will be stored.
-- `title` - (Required) A descriptive name for the file secret (e.g., "Production SSL Certificate").
-- `description` - (Optional) Additional details about the file's purpose or content.
-- `file_name` - (Required) The original name of the file (e.g., "certificate.crt", "backup.sql").
-- `file_content_base64` - (Required, Sensitive) The file content encoded in base64. Use the `filebase64()` function or `base64encode()` to encode file contents.
-- `owner_id` - (Required) The ID of the user who owns this file secret.
-- `owners` - (Optional) A list of additional owner IDs. Each entry should contain `owner_id`.
+- `folder_id` - (Required, String) The ID of the folder where the file will be stored.
+- `title` - (Required, String) A descriptive name for the file secret (e.g., "Production SSL Certificate").
+- `description` - (Optional, String) Additional details about the file's purpose or content.
+- `file_name` - (Required, String) The original name of the file (e.g., "certificate.crt", "backup.sql").
+- `file_content_base64` - (Required, String, Sensitive) The file content encoded in base64. Use the `filebase64()` function or `base64encode()` to encode file contents.
+- `owner_id` - (Optional, Number) The ID of the user who owns this file secret (auto-populated from authenticated user if not provided).
+- `owners` - (Optional, List) A list of additional owner IDs. Each entry should contain `owner_id`.
 
 ## Attributes
 
-- `id` - (Computed) The unique identifier of the file secret in Secret Safe.
+- `id` - (String, Computed) The unique identifier of the file secret in Secret Safe.
+- `folder_id` - (String) Parent folder UUID
+- `title` - (String) The secret title
+- `description` - (String) The secret description
+- `file_name` - (String) The file name
+- `file_content_base64` - (String, Sensitive) The file content as base64
+- `owner_id` - (Number) ID of the secret owner (auto-populated from authenticated user)
 
 ## Sensitive Attributes
 
@@ -52,12 +57,6 @@ resource "secretsafe_folder_file" "private_key" {
   description         = "Private key for third-party API authentication"
   file_name           = "api-key.pem"
   file_content_base64 = filebase64("${path.module}/keys/api-key.pem")
-  owner_id            = 5
-  owners = [
-    {
-      owner_id = 6
-    }
-  ]
 }
 ```
 
@@ -74,7 +73,6 @@ resource "secretsafe_folder_file" "config" {
     port     = 5432
     username = "dbuser"
   }))
-  owner_id = 5
 }
 ```
 
@@ -114,7 +112,6 @@ resource "secretsafe_folder_file" "ssl_from_var" {
   title               = "Dynamic SSL Certificate"
   file_name           = "dynamic.crt"
   file_content_base64 = filebase64(var.ssl_cert_path)
-  owner_id            = 5
 }
 ```
 

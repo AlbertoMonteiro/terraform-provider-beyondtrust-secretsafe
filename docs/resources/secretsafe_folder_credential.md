@@ -15,8 +15,7 @@ resource "secretsafe_folder_credential" "db_admin" {
   title       = "Production Database Admin"
   description = "Admin credentials for production PostgreSQL database"
   username    = "dbadmin"
-  password    = "SecurePassword123!@#"
-  owner_id    = 5
+  password    = var.db_password
 }
 
 output "credential_id" {
@@ -31,17 +30,23 @@ output "credential_username" {
 
 ## Arguments
 
-- `folder_id` - (Required) The ID of the folder where the credential will be stored.
-- `title` - (Required) A descriptive name for the credential (e.g., "Production DB Admin").
-- `description` - (Optional) Additional details about what this credential is used for.
-- `username` - (Required) The username for the credential.
-- `password` - (Required, Sensitive) The password for the credential. **Marked as sensitive to prevent accidental exposure in logs.**
-- `owner_id` - (Required) The ID of the user who owns this credential.
-- `owners` - (Optional) A list of additional owner IDs. Each entry should contain `owner_id`.
+- `folder_id` - (Required, String) The ID of the folder where the credential will be stored.
+- `title` - (Required, String) A descriptive name for the credential (e.g., "Production DB Admin").
+- `description` - (Optional, String) Additional details about what this credential is used for.
+- `username` - (Required, String) The username for the credential.
+- `password` - (Required, String, Sensitive) The password for the credential. **Marked as sensitive to prevent accidental exposure in logs.**
+- `owner_id` - (Optional, Number) The ID of the user who owns this credential (auto-populated from authenticated user if not provided).
+- `owners` - (Optional, List) A list of additional owner IDs. Each entry should contain `owner_id`.
 
 ## Attributes
 
-- `id` - (Computed) The unique identifier of the credential in Secret Safe.
+- `id` - (String, Computed) The unique identifier of the credential in Secret Safe.
+- `folder_id` - (String) Parent folder UUID
+- `title` - (String) The secret title
+- `description` - (String) The secret description
+- `username` - (String) The username
+- `password` - (String, Sensitive) The password
+- `owner_id` - (Number) ID of the secret owner (auto-populated from authenticated user)
 
 ## Sensitive Attributes
 
@@ -55,16 +60,7 @@ resource "secretsafe_folder_credential" "shared_credential" {
   title       = "Shared Service Account"
   description = "Shared credentials for CI/CD pipeline"
   username    = "ci_service_account"
-  password    = "ComplexPassword456!@#"
-  owner_id    = 5
-  owners = [
-    {
-      owner_id = 6
-    },
-    {
-      owner_id = 7
-    }
-  ]
+  password    = var.shared_password
 }
 ```
 
