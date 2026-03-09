@@ -54,8 +54,8 @@ public class FolderCredentialData
                     new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the credential secret." },
                     new Schema.Types.Attribute { Name = USERNAME, Type = TfTypes.String, Description = "The username for the credential.", Required = true },
                     new Schema.Types.Attribute { Name = PASSWORD, Type = TfTypes.String, Description = "The password for the credential.", Required = true, Sensitive = true },
-                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user.", Required = true },
-                    new Schema.Types.Attribute { Name = OWNERS, Type = TfTypes.List(TfTypes.Object(new Dictionary<string, ByteString> { { "owner_id", TfTypes.Number } })), Description = "List of owner IDs." },
+                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user (automatically set to authenticated user).", Computed = true },
+                    new Schema.Types.Attribute { Name = OWNERS, Type = TfTypes.List(TfTypes.Object(new Dictionary<string, ByteString> { { "owner_id", TfTypes.Number } })), Description = "List of owner IDs (computed from authenticated user).", Computed = true },
                 }
             }
         };

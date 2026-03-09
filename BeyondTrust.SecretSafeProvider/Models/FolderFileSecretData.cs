@@ -54,8 +54,8 @@ public class FolderFileSecretData
                     new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the file secret." },
                     new Schema.Types.Attribute { Name = FILE_NAME, Type = TfTypes.String, Description = "The name of the file.", Required = true },
                     new Schema.Types.Attribute { Name = FILE_CONTENT_BASE64, Type = TfTypes.String, Description = "The file content encoded in base64.", Required = true, Sensitive = true },
-                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user.", Required = true },
-                    new Schema.Types.Attribute { Name = OWNERS, Type = TfTypes.List(TfTypes.Object(new Dictionary<string, ByteString> { { "owner_id", TfTypes.Number } })), Description = "List of owner IDs." },
+                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user (automatically set to authenticated user).", Computed = true },
+                    new Schema.Types.Attribute { Name = OWNERS, Type = TfTypes.List(TfTypes.Object(new Dictionary<string, ByteString> { { "owner_id", TfTypes.Number } })), Description = "List of owner IDs (computed from authenticated user).", Computed = true },
                 }
             }
         };

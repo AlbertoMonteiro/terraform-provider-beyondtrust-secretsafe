@@ -35,6 +35,7 @@ public class FolderFileSecretResourceHandlerTests
         // Arrange
         var folderId = Guid.NewGuid().ToString("N");
         var secretId = Guid.NewGuid().ToString("N");
+        var userId = 42;
         var testFileContent = "Test file content"u8.ToArray();
         var base64Content = Convert.ToBase64String(testFileContent);
 
@@ -45,7 +46,7 @@ public class FolderFileSecretResourceHandlerTests
             Description = "Test Description",
             FileName = "test.txt",
             FileContentBase64 = base64Content,
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var applyRequest = new ApplyResourceChange.Types.Request
@@ -57,13 +58,16 @@ public class FolderFileSecretResourceHandlerTests
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
 
-        var secretResponse = new SecretResponse(secretId, fileSecret.Title, fileSecret.Description, fileSecret.OwnerId);
+        var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
+
+        var secretResponse = new SecretResponse(secretId, fileSecret.Title, fileSecret.Description, userId);
         var createRequest = new CreateSecretFileRequest(
             fileSecret.Title,
             fileSecret.Description,
             fileSecret.FileName,
             base64Content,
-            fileSecret.OwnerId);
+            userId);
 
         // Mock is set to accept any StreamPart (handled internally by Imposter)
         // Just verify SignAppin and Signout are called
@@ -80,7 +84,7 @@ public class FolderFileSecretResourceHandlerTests
         await Assert.That(resultData.Title).IsEqualTo(fileSecret.Title);
         await Assert.That(resultData.FileName).IsEqualTo(fileSecret.FileName);
         await Assert.That(resultData.FileContentBase64).IsEqualTo(base64Content);
-        await Assert.That(resultData.OwnerId).IsEqualTo(1);
+        await Assert.That(resultData.OwnerId).IsEqualTo(userId);
     }
 
     [Test]
@@ -89,6 +93,7 @@ public class FolderFileSecretResourceHandlerTests
         // Arrange
         var secretId = Guid.NewGuid().ToString("N");
         var folderId = Guid.NewGuid().ToString("N");
+        var userId = 42;
         var testFileContent = "Test file content"u8.ToArray();
         var base64Content = Convert.ToBase64String(testFileContent);
 
@@ -99,7 +104,7 @@ public class FolderFileSecretResourceHandlerTests
             Title = "Test File",
             FileName = "test.txt",
             FileContentBase64 = base64Content,
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var readRequest = new ReadResource.Types.Request
@@ -109,6 +114,9 @@ public class FolderFileSecretResourceHandlerTests
 
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
+
+        var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
 
         var secretValue = new SecretValue("", "");
         imposter.GetSecret(Guid.Parse(secretId)).ReturnsAsync(secretValue);
@@ -132,6 +140,7 @@ public class FolderFileSecretResourceHandlerTests
     {
         // Arrange
         var folderId = Guid.NewGuid().ToString("N");
+        var userId = 42;
         const string exceptionMessage = "Failed to create file secret";
         var base64Content = Convert.ToBase64String("Test content"u8.ToArray());
 
@@ -141,7 +150,7 @@ public class FolderFileSecretResourceHandlerTests
             Title = "Test File",
             FileName = "test.txt",
             FileContentBase64 = base64Content,
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var applyRequest = new ApplyResourceChange.Types.Request
@@ -153,12 +162,15 @@ public class FolderFileSecretResourceHandlerTests
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
 
+        var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
+
         var createRequest = new CreateSecretFileRequest(
             fileSecret.Title,
             fileSecret.Description,
             fileSecret.FileName,
             base64Content,
-            fileSecret.OwnerId);
+            userId);
 
         // Note: StreamPart mocking is handled internally by Imposter
 
@@ -176,6 +188,7 @@ public class FolderFileSecretResourceHandlerTests
     {
         // Arrange
         var secretId = Guid.NewGuid().ToString("N");
+        var userId = 42;
         const string exceptionMessage = "Authentication failed";
         var base64Content = Convert.ToBase64String("Test content"u8.ToArray());
 
@@ -186,7 +199,7 @@ public class FolderFileSecretResourceHandlerTests
             Title = "Test File",
             FileName = "test.txt",
             FileContentBase64 = base64Content,
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var readRequest = new ReadResource.Types.Request
@@ -213,6 +226,7 @@ public class FolderFileSecretResourceHandlerTests
     public async Task ReadAsync_WithMissingId_ReturnsDiagnosticWithError()
     {
         // Arrange
+        var userId = 42;
         var base64Content = Convert.ToBase64String("Test content"u8.ToArray());
         var fileSecret = new FolderFileSecretData
         {
@@ -221,7 +235,7 @@ public class FolderFileSecretResourceHandlerTests
             Title = "Test File",
             FileName = "test.txt",
             FileContentBase64 = base64Content,
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var readRequest = new ReadResource.Types.Request

@@ -34,6 +34,7 @@ public class FolderCredentialResourceHandlerTests
         // Arrange
         var folderId = Guid.NewGuid().ToString("N");
         var secretId = Guid.NewGuid().ToString("N");
+        var userId = 42;
 
         var credential = new FolderCredentialData
         {
@@ -42,7 +43,7 @@ public class FolderCredentialResourceHandlerTests
             Description = "Test Description",
             Username = "testuser",
             Password = "testpass",
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var applyRequest = new ApplyResourceChange.Types.Request
@@ -54,13 +55,16 @@ public class FolderCredentialResourceHandlerTests
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
 
-        var secretResponse = new SecretResponse(secretId, credential.Title, credential.Description, credential.OwnerId);
+        var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
+
+        var secretResponse = new SecretResponse(secretId, credential.Title, credential.Description, userId);
         var createRequest = new CreateSecretCredentialRequest(
             credential.Title,
             credential.Description,
             credential.Username,
             credential.Password,
-            credential.OwnerId);
+            userId);
         imposter.CreateCredentialSecret(folderId, createRequest).ReturnsAsync(secretResponse);
 
         // Act
@@ -76,7 +80,7 @@ public class FolderCredentialResourceHandlerTests
         await Assert.That(resultData.Title).IsEqualTo(credential.Title);
         await Assert.That(resultData.Username).IsEqualTo(credential.Username);
         await Assert.That(resultData.Password).IsEqualTo(credential.Password);
-        await Assert.That(resultData.OwnerId).IsEqualTo(1);
+        await Assert.That(resultData.OwnerId).IsEqualTo(userId);
     }
 
     [Test]
@@ -85,6 +89,7 @@ public class FolderCredentialResourceHandlerTests
         // Arrange
         var secretId = Guid.NewGuid().ToString("N");
         var folderId = Guid.NewGuid().ToString("N");
+        var userId = 42;
 
         var priorCredential = new FolderCredentialData
         {
@@ -93,7 +98,7 @@ public class FolderCredentialResourceHandlerTests
             Title = "Old Title",
             Username = "olduser",
             Password = "oldpass",
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var plannedCredential = new FolderCredentialData
@@ -104,7 +109,7 @@ public class FolderCredentialResourceHandlerTests
             Description = "New Description",
             Username = "newuser",
             Password = "newpass",
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var applyRequest = new ApplyResourceChange.Types.Request
@@ -116,13 +121,16 @@ public class FolderCredentialResourceHandlerTests
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
 
-        var secretResponse = new SecretResponse(secretId, plannedCredential.Title, plannedCredential.Description, 1);
+        var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
+
+        var secretResponse = new SecretResponse(secretId, plannedCredential.Title, plannedCredential.Description, userId);
         var updateRequest = new CreateSecretCredentialRequest(
             plannedCredential.Title,
             plannedCredential.Description,
             plannedCredential.Username,
             plannedCredential.Password,
-            plannedCredential.OwnerId);
+            userId);
         imposter.UpdateCredentialSecret(secretId, updateRequest).ReturnsAsync(secretResponse);
 
         // Act
@@ -145,6 +153,7 @@ public class FolderCredentialResourceHandlerTests
         // Arrange
         var secretId = Guid.NewGuid().ToString("N");
         var folderId = Guid.NewGuid().ToString("N");
+        var userId = 42;
 
         var credential = new FolderCredentialData
         {
@@ -153,7 +162,7 @@ public class FolderCredentialResourceHandlerTests
             Title = "Test Credential",
             Username = "testuser",
             Password = "testpass",
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var readRequest = new ReadResource.Types.Request
@@ -163,6 +172,9 @@ public class FolderCredentialResourceHandlerTests
 
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
+
+        var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
 
         var secretValue = new SecretValue(credential.Password, credential.Username);
         imposter.GetSecret(Guid.Parse(secretId)).ReturnsAsync(secretValue);
@@ -186,6 +198,7 @@ public class FolderCredentialResourceHandlerTests
     {
         // Arrange
         var folderId = Guid.NewGuid().ToString("N");
+        var userId = 42;
         const string exceptionMessage = "Failed to create credential";
 
         var credential = new FolderCredentialData
@@ -194,7 +207,7 @@ public class FolderCredentialResourceHandlerTests
             Title = "Test Credential",
             Username = "testuser",
             Password = "testpass",
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var applyRequest = new ApplyResourceChange.Types.Request
@@ -206,12 +219,15 @@ public class FolderCredentialResourceHandlerTests
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
 
+        var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
+
         var createRequest = new CreateSecretCredentialRequest(
             credential.Title,
             credential.Description,
             credential.Username,
             credential.Password,
-            credential.OwnerId);
+            userId);
         imposter.CreateCredentialSecret(folderId, createRequest)
             .Throws(new Exception(exceptionMessage));
 
@@ -229,6 +245,7 @@ public class FolderCredentialResourceHandlerTests
     {
         // Arrange
         var secretId = Guid.NewGuid().ToString("N");
+        var userId = 42;
         const string exceptionMessage = "Authentication failed";
 
         var credential = new FolderCredentialData
@@ -238,7 +255,7 @@ public class FolderCredentialResourceHandlerTests
             Title = "Test Credential",
             Username = "testuser",
             Password = "testpass",
-            OwnerId = 1
+            OwnerId = userId
         };
 
         var readRequest = new ReadResource.Types.Request

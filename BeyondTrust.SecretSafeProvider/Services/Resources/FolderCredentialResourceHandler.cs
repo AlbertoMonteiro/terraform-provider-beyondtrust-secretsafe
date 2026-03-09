@@ -83,7 +83,8 @@ public class FolderCredentialResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            var ownerId = signAppinResponse.UserId;
 
             string resourceId;
 
@@ -95,8 +96,8 @@ public class FolderCredentialResourceHandler(
                     Description: plannedState.Description,
                     Username: plannedState.Username,
                     Password: plannedState.Password,
-                    OwnerId: plannedState.OwnerId,
-                    Owners: plannedState.Owners);
+                    OwnerId: ownerId,
+                    Owners: null);
 
                 var secretResponse = await secretSafe.CreateCredentialSecret(plannedState.FolderId, request_body);
                 resourceId = secretResponse.Id;
@@ -109,8 +110,8 @@ public class FolderCredentialResourceHandler(
                     Description: plannedState.Description,
                     Username: plannedState.Username,
                     Password: plannedState.Password,
-                    OwnerId: plannedState.OwnerId,
-                    Owners: plannedState.Owners);
+                    OwnerId: ownerId,
+                    Owners: null);
 
                 var secretResponse = await secretSafe.UpdateCredentialSecret(resourceData.Id, request_body);
                 resourceId = secretResponse.Id;
@@ -126,8 +127,8 @@ public class FolderCredentialResourceHandler(
                 Description = plannedState.Description,
                 Username = plannedState.Username,
                 Password = plannedState.Password,
-                OwnerId = plannedState.OwnerId,
-                Owners = plannedState.Owners
+                OwnerId = ownerId,
+                Owners = null
             };
 
             return new ApplyResourceChange.Types.Response

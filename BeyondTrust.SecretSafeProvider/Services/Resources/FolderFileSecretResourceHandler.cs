@@ -84,7 +84,8 @@ public class FolderFileSecretResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            var ownerId = signAppinResponse.UserId;
 
             string resourceId;
 
@@ -99,8 +100,8 @@ public class FolderFileSecretResourceHandler(
                     Description: plannedState.Description,
                     FileName: plannedState.FileName,
                     FileContent: plannedState.FileContentBase64,
-                    OwnerId: plannedState.OwnerId,
-                    Owners: plannedState.Owners);
+                    OwnerId: ownerId,
+                    Owners: null);
 
                 using var stream = new MemoryStream(fileBytes);
                 var filePart = new StreamPart(stream, plannedState.FileName, "application/octet-stream");
@@ -119,8 +120,8 @@ public class FolderFileSecretResourceHandler(
                     Description: plannedState.Description,
                     FileName: plannedState.FileName,
                     FileContent: plannedState.FileContentBase64,
-                    OwnerId: plannedState.OwnerId,
-                    Owners: plannedState.Owners);
+                    OwnerId: ownerId,
+                    Owners: null);
 
                 using var stream = new MemoryStream(fileBytes);
                 var filePart = new StreamPart(stream, plannedState.FileName, "application/octet-stream");
@@ -139,8 +140,8 @@ public class FolderFileSecretResourceHandler(
                 Description = plannedState.Description,
                 FileName = plannedState.FileName,
                 FileContentBase64 = plannedState.FileContentBase64,
-                OwnerId = plannedState.OwnerId,
-                Owners = plannedState.Owners
+                OwnerId = ownerId,
+                Owners = null
             };
 
             return new ApplyResourceChange.Types.Response
