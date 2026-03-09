@@ -10,7 +10,18 @@
       "Bash(pdftotext:*)",
       "Bash(dotnet test:*)",
       "Bash(dotnet run:*)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "mcp__playwright__playwright_navigate",
+      "mcp__playwright__playwright_screenshot",
+      "mcp__playwright__playwright_get_visible_html",
+      "mcp__playwright__playwright_get_visible_text",
+      "mcp__playwright__playwright_click",
+      "mcp__playwright__playwright_close",
+      "Bash(gh release:*)",
+      "Bash(unzip:*)",
+      "Bash(gpg:*)",
+      "Bash(git tag:*)",
+      "Bash(git:*)"
     ]
   }
 }
