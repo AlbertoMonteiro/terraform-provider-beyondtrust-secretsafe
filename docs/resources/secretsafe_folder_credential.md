@@ -7,7 +7,6 @@ Create and manage username/password credentials within BeyondTrust Secret Safe f
 ```hcl
 resource "secretsafe_folder" "credentials" {
   name          = "Database Credentials"
-  owner_id      = 42
   user_group_id = 1
 }
 

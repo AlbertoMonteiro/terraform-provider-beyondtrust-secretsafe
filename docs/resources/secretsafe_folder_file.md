@@ -7,7 +7,6 @@ Upload and manage encrypted file secrets within BeyondTrust Secret Safe folders.
 ```hcl
 resource "secretsafe_folder" "secure_files" {
   name          = "Encrypted Files"
-  owner_id      = 42
   user_group_id = 1
 }
 

@@ -97,15 +97,18 @@ public class FolderResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
+            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
 
             FolderResponse folderResponse;
+
+            // Use authenticated user ID if OwnerId not provided
+            var ownerId = plannedState.OwnerId ?? signAppinResponse.UserId;
 
             // Create if no prior state
             if (string.IsNullOrEmpty(resourceData?.Id))
             {
                 var folderRequest = new FolderRequest(
-                    OwnerId: plannedState.OwnerId,
+                    OwnerId: ownerId,
                     Name: plannedState.Name,
                     Description: plannedState.Description,
                     ParentId: plannedState.ParentId,
@@ -117,7 +120,7 @@ public class FolderResourceHandler(
             {
                 // Update if prior state exists
                 var folderRequest = new FolderRequest(
-                    OwnerId: plannedState.OwnerId,
+                    OwnerId: ownerId,
                     Name: plannedState.Name,
                     Description: plannedState.Description,
                     ParentId: plannedState.ParentId,

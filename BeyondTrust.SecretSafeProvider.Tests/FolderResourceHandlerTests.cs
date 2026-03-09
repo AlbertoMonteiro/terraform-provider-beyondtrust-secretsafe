@@ -29,16 +29,16 @@ public class FolderResourceHandlerTests
     }
 
     [Test]
-    public async Task ApplyAsync_WithNoPriorState_CreatesNewFolder()
+    public async Task ApplyAsync_WithNoPriorState_CreatesNewFolder_WithDefaultOwner()
     {
-        // Arrange
+        // Arrange - OwnerId is null and should default to authenticated user (42)
         var folderId = Guid.NewGuid().ToString("N");
 
         var folder = new FolderResourceData
         {
             Name = "Test Folder",
             Description = "Test Description",
-            OwnerId = 42,
+            OwnerId = null,
             ParentId = null,
             UserGroupId = 1
         };
@@ -56,8 +56,9 @@ public class FolderResourceHandlerTests
         imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
 
         var folderResponse = new FolderResponse(folderId, folder.Name, folder.Description, folder.ParentId, folder.UserGroupId);
+        // Handler should create with OwnerId = 42 (from SignAppinResponse.UserId)
         var createRequest = new FolderRequest(
-            OwnerId: folder.OwnerId,
+            OwnerId: 42,
             Name: folder.Name,
             Description: folder.Description,
             ParentId: folder.ParentId,
@@ -70,6 +71,58 @@ public class FolderResourceHandlerTests
 
         // Assert
         imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).Called(Count.Once());
+        imposter.CreateFolder(createRequest).Called(Count.Once());
+        imposter.Signout().Called(Count.Once());
+
+        await Assert.That(resultData.Id).IsEqualTo(folderId);
+        await Assert.That(resultData.Name).IsEqualTo(folder.Name);
+        await Assert.That(resultData.UserGroupId).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ApplyAsync_WithNoPriorState_CreatesNewFolder_WithProvidedOwner()
+    {
+        // Arrange - OwnerId is provided (99) and should override authenticated user (42)
+        var folderId = Guid.NewGuid().ToString("N");
+
+        var folder = new FolderResourceData
+        {
+            Name = "Test Folder",
+            Description = "Test Description",
+            OwnerId = 99,
+            ParentId = null,
+            UserGroupId = 1
+        };
+
+        var applyRequest = new ApplyResourceChange.Types.Request
+        {
+            PlannedState = SmartSerializer.Serialize(folder),
+            PriorState = new DynamicValue()
+        };
+
+        var imposter = IBeyondTrustSecretSafe.Imposter();
+        _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
+
+        var signAppinResponse = new SignAppinResponse(UserId: 42, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
+
+        var folderResponse = new FolderResponse(folderId, folder.Name, folder.Description, folder.ParentId, folder.UserGroupId);
+        // Handler should create with OwnerId = 99 (from FolderResourceData)
+        var createRequest = new FolderRequest(
+            OwnerId: 99,
+            Name: folder.Name,
+            Description: folder.Description,
+            ParentId: folder.ParentId,
+            UserGroupId: folder.UserGroupId);
+        imposter.CreateFolder(createRequest).ReturnsAsync(folderResponse);
+
+        // Act
+        var result = await _sut.ApplyAsync(applyRequest);
+        var resultData = SmartSerializer.Deserialize<FolderResourceData>(result.NewState);
+
+        // Assert
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).Called(Count.Once());
+        imposter.CreateFolder(createRequest).Called(Count.Once());
         imposter.Signout().Called(Count.Once());
 
         await Assert.That(resultData.Id).IsEqualTo(folderId);
@@ -179,7 +232,7 @@ public class FolderResourceHandlerTests
         var folder = new FolderResourceData
         {
             Name = "Test Folder",
-            OwnerId = 42,
+            OwnerId = null,
             UserGroupId = 1
         };
 
@@ -192,8 +245,11 @@ public class FolderResourceHandlerTests
         var imposter = IBeyondTrustSecretSafe.Imposter();
         _beyondTrustApiFactory.CreateApi().Returns(imposter.Instance());
 
+        var signAppinResponse = new SignAppinResponse(UserId: 42, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
+        imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
+
         var createRequest = new FolderRequest(
-            OwnerId: folder.OwnerId,
+            OwnerId: 42,
             Name: folder.Name,
             Description: null,
             ParentId: null,
