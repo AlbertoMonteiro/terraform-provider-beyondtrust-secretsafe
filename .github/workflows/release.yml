@@ -174,13 +174,15 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Sign SHA256SUMS (binary format)
+      - name: Sign SHA256SUMS
         if: steps.check.outputs.has_artifacts == 'true'
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           SUMS_FILE="terraform-provider-${PROVIDER_NAME}_${VERSION}_SHA256SUMS"
-          # Generate binary (not ASCII-armored) detached signature
-          gpg --batch --yes --detach-sign "${SUMS_FILE}"
+          # Generate detached signature (ASCII-armored format)
+          gpg --batch --yes --armor --detach-sign "${SUMS_FILE}"
+          # Rename .asc to .sig for Terraform Registry
+          mv "${SUMS_FILE}.asc" "${SUMS_FILE}.sig"
           ls -la "${SUMS_FILE}"*
 
       - name: Create GitHub Release
