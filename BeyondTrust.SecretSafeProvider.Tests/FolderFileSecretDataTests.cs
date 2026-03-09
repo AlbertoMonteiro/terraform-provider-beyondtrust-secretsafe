@@ -86,14 +86,14 @@ public class FolderFileSecretDataTests
     }
 
     [Test]
-    public async Task GetSchema_OwnerIdAttribute_IsRequiredNumber()
+    public async Task GetSchema_OwnerIdAttribute_IsComputedNumber()
     {
         // Act
         var schema = FolderFileSecretData.GetSchema();
         var attr = schema.Block.Attributes.Single(a => a.Name == "owner_id");
 
         // Assert
-        await Assert.That(attr.Required).IsTrue();
-        await Assert.That(attr.Computed).IsFalse();
+        await Assert.That(attr.Computed).IsTrue();
+        await Assert.That(attr.Required).IsFalse();
     }
 }
