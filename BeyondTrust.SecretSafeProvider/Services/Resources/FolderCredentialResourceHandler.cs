@@ -36,7 +36,7 @@ public class FolderCredentialResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
             var secretResponse = await secretSafe.GetSecret(Guid.Parse(resourceData.Id));
             await secretSafe.Signout();
 
@@ -83,7 +83,7 @@ public class FolderCredentialResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
             var ownerId = signAppinResponse.UserId;
 
             string resourceId;

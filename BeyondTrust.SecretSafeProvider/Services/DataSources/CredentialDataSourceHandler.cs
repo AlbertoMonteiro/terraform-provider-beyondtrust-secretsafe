@@ -21,7 +21,7 @@ public class CredentialDataSourceHandler(
 
         try
         {
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
             var secretResponse = await secretSafe.GetSecret(Guid.Parse(input.SecretId));
             await secretSafe.Signout();
 

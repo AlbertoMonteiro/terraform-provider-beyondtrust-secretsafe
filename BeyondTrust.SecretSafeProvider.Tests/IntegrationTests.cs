@@ -20,7 +20,7 @@ public class IntegrationTests(AspireSetup aspire)
 
         // Assert — provider schema
         await Assert.That(response.Provider).IsNotNull();
-        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(3);
+        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(4);
         await Assert.That(response.Provider.Block.Attributes.Select(a => a.Name))
             .Contains("key")
             .And.Contains("runas")

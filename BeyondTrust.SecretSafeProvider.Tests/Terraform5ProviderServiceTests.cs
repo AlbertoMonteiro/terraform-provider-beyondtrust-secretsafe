@@ -52,7 +52,7 @@ public class Terraform5ProviderServiceTests
         await Assert.That(response.DataSourceSchemas.ContainsKey(_credentialDataSourceHandler.TypeName)).IsTrue();
         await Assert.That(response.DataSourceSchemas[_credentialDataSourceHandler.TypeName]).IsNotNull();
         await Assert.That(response.Provider).IsNotNull();
-        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(3);
+        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(4);
     }
 
     [Test]

@@ -21,7 +21,7 @@ public class FileDownloadDataSourceHandler(
 
         try
         {
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs));
+            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
             var response = await secretSafe.DownloadSecret(Guid.Parse(input.SecretId));
             await secretSafe.Signout();
 
