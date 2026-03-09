@@ -115,7 +115,8 @@ dotnet publish -c Release -r linux-musl-x64 -o /app/publish \
 │   └── __admin/mappings/                     # WireMock API mocks
 ├── BeyondTrust.SecretSafeProvider.Tests/     # Integration & unit tests
 ├── docs/                                     # Terraform Registry documentation
-└── CLAUDE.md                                 # Development guidelines
+├── CLAUDE.md                                 # Development guidelines
+└── DESIGN_DECISIONS.md                       # Architecture & lessons learned
 ```
 
 ### Architecture
@@ -147,6 +148,17 @@ WireMock mappings are located in `BeyondTrust.SecretSafeProvider.AppHost/__admin
 - `/public/v3/Secrets-Safe/Secrets/{id}` - Get secret
 - `/public/v3/Secrets-Safe/Secrets/{id}/file/download` - Download file
 - `/public/v3/Secrets-Safe/Folders/*` - Folder operations
+
+### Architecture Deep Dive
+
+For a deeper understanding of design decisions, lessons learned, and architectural trade-offs, see [DESIGN_DECISIONS.md](./DESIGN_DECISIONS.md). This includes insights on:
+
+- Terraform Plugin Protocol v5.2 handshake and base64 encoding without padding
+- Native AOT constraints and reflection-free code requirements
+- mTLS with self-signed certificates
+- Service configuration patterns and dependency injection
+- Testing strategies with Aspire and WireMock
+- Error handling in the context of BeyondTrust API semantics
 
 ## Contributing
 
