@@ -1,0 +1,146 @@
+# Resource: secretsafe_folder_file
+
+Upload and manage encrypted file secrets within BeyondTrust Secret Safe folders.
+
+## Example
+
+```hcl
+resource "secretsafe_folder" "secure_files" {
+  name          = "Encrypted Files"
+  user_group_id = 1
+}
+
+resource "secretsafe_folder_file" "ssl_cert" {
+  folder_id            = secretsafe_folder.secure_files.id
+  title                = "Production SSL Certificate"
+  description          = "SSL/TLS certificate for production web server"
+  file_name            = "prod-server.crt"
+  file_content_base64  = filebase64("${path.module}/certs/prod-server.crt")
+  owner_id             = 5
+}
+
+output "file_secret_id" {
+  value     = secretsafe_folder_file.ssl_cert.id
+  sensitive = true
+}
+```
+
+## Arguments
+
+- `folder_id` - (Required) The ID of the folder where the file will be stored.
+- `title` - (Required) A descriptive name for the file secret (e.g., "Production SSL Certificate").
+- `description` - (Optional) Additional details about the file's purpose or content.
+- `file_name` - (Required) The original name of the file (e.g., "certificate.crt", "backup.sql").
+- `file_content_base64` - (Required, Sensitive) The file content encoded in base64. Use the `filebase64()` function or `base64encode()` to encode file contents.
+- `owner_id` - (Required) The ID of the user who owns this file secret.
+- `owners` - (Optional) A list of additional owner IDs. Each entry should contain `owner_id`.
+
+## Attributes
+
+- `id` - (Computed) The unique identifier of the file secret in Secret Safe.
+
+## Sensitive Attributes
+
+The `file_content_base64` attribute is marked as sensitive to prevent file contents from being exposed in logs or state files.
+
+## Example with Multiple Owners
+
+```hcl
+resource "secretsafe_folder_file" "private_key" {
+  folder_id           = secretsafe_folder.secure_files.id
+  title               = "API Private Key"
+  description         = "Private key for third-party API authentication"
+  file_name           = "api-key.pem"
+  file_content_base64 = filebase64("${path.module}/keys/api-key.pem")
+  owner_id            = 5
+  owners = [
+    {
+      owner_id = 6
+    }
+  ]
+}
+```
+
+## Example with Inline Content
+
+```hcl
+resource "secretsafe_folder_file" "config" {
+  folder_id           = secretsafe_folder.secure_files.id
+  title               = "Database Configuration"
+  description         = "Encrypted database configuration file"
+  file_name           = "database-config.json"
+  file_content_base64 = base64encode(jsonencode({
+    host     = "db.example.com"
+    port     = 5432
+    username = "dbuser"
+  }))
+  owner_id = 5
+}
+```
+
+## Notes
+
+### Base64 Encoding
+
+- Use `filebase64()` function to read and encode files: `filebase64("${path.module}/path/to/file")`
+- Use `base64encode()` function for inline content: `base64encode("content here")`
+- Binary files and text files both require base64 encoding
+
+### File Size Considerations
+
+- Large files increase the size of the Terraform state file
+- Consider the network bandwidth when uploading large files
+- Keep encrypted backups of your files for disaster recovery
+
+### Security Best Practices
+
+- **Never commit raw file contents** to your repository; use local file references with `.gitignore`
+- **Use `terraform plan`** before applying to verify file paths and contents
+- **Store sensitive files** outside your Terraform working directory
+- **Rotate old file secrets** by replacing them with new versions
+- **Monitor access logs** in Secret Safe for unauthorized access attempts
+
+## Example with Sensitive Local File
+
+```hcl
+variable "ssl_cert_path" {
+  type        = string
+  description = "Path to SSL certificate file"
+  sensitive   = true
+}
+
+resource "secretsafe_folder_file" "ssl_from_var" {
+  folder_id           = secretsafe_folder.secure_files.id
+  title               = "Dynamic SSL Certificate"
+  file_name           = "dynamic.crt"
+  file_content_base64 = filebase64(var.ssl_cert_path)
+  owner_id            = 5
+}
+```
+
+## Import
+
+File secrets can be imported using the secret ID:
+
+```bash
+terraform import secretsafe_folder_file.ssl_cert secret-id-here
+```
+
+## Technical Details
+
+### Upload Process
+
+1. File is encoded to base64 in Terraform
+2. Provider decodes base64 content
+3. File is uploaded to Secret Safe via `multipart/form-data`
+4. Secret Safe encrypts and stores the file
+5. File ID is returned and stored in state
+
+### Supported File Types
+
+- **Certificates & Keys**: `.crt`, `.key`, `.pem`, `.pfx`
+- **Archives**: `.zip`, `.tar`, `.gz`, `.7z`
+- **Backups**: `.sql`, `.bak`, `.backup`
+- **Configuration**: `.json`, `.yaml`, `.yml`, `.toml`, `.xml`
+- **Documents**: `.pdf`, `.docx`, `.xlsx`
+- **Any binary or text file**

@@ -405,7 +405,7 @@ Base: `/public/v3`
 
 9. **Testes de integração:** via Aspire (ApplyResourceChange msgpack + JSON para CRUD)
 
-10. **Documentação:** ⬜ `docs/resources/secretsafe_folder.md` — Documentação para Terraform Registry
+10. **Documentação:** ✅ `docs/resources/secretsafe_folder.md` — Documentação para Terraform Registry
 
 ---
 
@@ -485,7 +485,7 @@ Base: `/public/v3`
 
 9. **Testes de integração:** via Aspire (ApplyResourceChange msgpack + JSON para CRUD)
 
-10. **Documentação:** ⬜ `docs/resources/secretsafe_folder_credential.md` — Documentação para Terraform Registry
+10. **Documentação:** ✅ `docs/resources/secretsafe_folder_credential.md` — Documentação para Terraform Registry
 
 ---
 
@@ -541,7 +541,7 @@ Base: `/public/v3`
 
 9. **Testes de integração:** via Aspire (ApplyResourceChange com multipart form-data)
 
-10. **Documentação:** ⬜ `docs/resources/secretsafe_folder_file.md` — Documentação para Terraform Registry
+10. **Documentação:** ✅ `docs/resources/secretsafe_folder_file.md` — Documentação para Terraform Registry
 
 ---
 

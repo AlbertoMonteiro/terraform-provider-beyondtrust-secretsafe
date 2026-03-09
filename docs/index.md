@@ -65,4 +65,29 @@ output "file_content" {
   value     = data.secretsafe_download_file_data.example.file_content_base64
   sensitive = true
 }
+
+# Create and manage folders
+resource "secretsafe_folder" "example" {
+  name           = "My Secure Folder"
+  description    = "Folder for storing secrets"
+  user_group_id  = 1
+}
+
+# Create credentials in a folder
+resource "secretsafe_folder_credential" "db_cred" {
+  folder_id   = secretsafe_folder.example.id
+  title       = "Database Admin"
+  username    = "dbadmin"
+  password    = var.db_password
+  owner_id    = 5
+}
+
+# Upload files to a folder
+resource "secretsafe_folder_file" "ssl_cert" {
+  folder_id           = secretsafe_folder.example.id
+  title               = "SSL Certificate"
+  file_name           = "server.crt"
+  file_content_base64 = filebase64("${path.module}/certs/server.crt")
+  owner_id            = 5
+}
 ```
