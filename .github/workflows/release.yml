@@ -22,6 +22,8 @@ jobs:
         include:
           # Linux (Alpine Docker / musl — StaticExecutable=false to preserve dlopen)
           - { os: linux,   arch: amd64, rid: linux-musl-x64,   platform: linux/amd64,  runner: ubuntu-latest,    use_qemu: false }
+          # Windows
+          - { os: windows, arch: amd64, rid: win-x64,          runner: windows-latest, use_qemu: false }
 
     steps:
       - name: Checkout
