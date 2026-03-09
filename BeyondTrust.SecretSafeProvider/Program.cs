@@ -3,6 +3,7 @@ using BeyondTrust.SecretSafeProvider;
 using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Services;
 using BeyondTrust.SecretSafeProvider.Services.DataSources;
+using BeyondTrust.SecretSafeProvider.Services.Resources;
 using Refit;
 
 var builder = WebApplication.CreateSlimBuilder(args);
@@ -33,6 +34,7 @@ builder.Services.AddSingleton<IBeyondTrustApiFactory, BeyondTrustApiFactory>();
 builder.Services.AddSingleton(emptyConfiguration);
 builder.Services.AddSingleton<IDataSourceHandler, CredentialDataSourceHandler>();
 builder.Services.AddSingleton<IDataSourceHandler, FileDownloadDataSourceHandler>();
+builder.Services.AddSingleton<IResourceHandler, FolderCredentialResourceHandler>();
 
 var app = builder.Build();
 

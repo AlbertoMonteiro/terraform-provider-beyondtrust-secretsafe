@@ -16,6 +16,12 @@ public interface IBeyondTrustSecretSafe
     [Get($"{V3}/Secrets-Safe/Secrets/{{secretId}}/file/download")]
     public Task<HttpResponseMessage> DownloadSecret(Guid secretId);
 
+    [Post($"{V3}/Secrets-Safe/Folders/{{folderId}}/secrets")]
+    public Task<SecretResponse> CreateCredentialSecret(string folderId, [Body] CreateSecretCredentialRequest request);
+
+    [Put($"{V3}/Secrets-Safe/Secrets/{{secretId}}")]
+    public Task<SecretResponse> UpdateCredentialSecret(string secretId, [Body] CreateSecretCredentialRequest request);
+
     [Post($"{V3}/Auth/Signout")]
     public Task<ApiResponse<HttpResponseMessage>> Signout();
 }

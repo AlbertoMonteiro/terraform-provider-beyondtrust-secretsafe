@@ -342,7 +342,7 @@ Base: `/public/v3`
 
 ---
 
-### ⬜ 10. `secretsafe_folder_credential` — NOVO RESOURCE (CREATE/UPDATE) — PENDENTE
+### ✅ 10. `secretsafe_folder_credential` — NOVO RESOURCE (CREATE/UPDATE) — PENDENTE
 
 **API:** `POST /Secrets-Safe/Folders/{folderId}/secrets`
 
@@ -463,7 +463,7 @@ Base: `/public/v3`
 | 7 | ⬜ `secretsafe_folders_list_data` (data source) | **Baixa** | Listar pastas com filtros |
 | 8 | ⬜ `secretsafe_folder` (resource CRUD) | **Média** | Gerenciar pastas (criar, atualizar, deletar) |
 | 9 | ⬜ `secretsafe_folder_secrets_list_data` (data source) | **Média** | Listar secrets dentro de uma pasta |
-| 10 | ⬜ `secretsafe_folder_credential` (resource) | **Alta** | Criar/atualizar credenciais em pastas |
+| 10 | ✅ `secretsafe_folder_credential` (resource) | **Alta** | Criar/atualizar credenciais em pastas |
 | 11 | ⬜ `secretsafe_folder_file` (resource) | **Alta** | Upload de arquivos em pastas (multipart) |
 
 ---

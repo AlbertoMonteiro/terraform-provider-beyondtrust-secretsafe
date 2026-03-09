@@ -11,6 +11,10 @@ namespace BeyondTrust.SecretSafeProvider.Serialization;
 [JsonSerializable(typeof(SignAppinResponse))]
 [JsonSerializable(typeof(CredentialData))]
 [JsonSerializable(typeof(FileDownloadData))]
+[JsonSerializable(typeof(CreateSecretCredentialRequest))]
+[JsonSerializable(typeof(OwnerInfo))]
+[JsonSerializable(typeof(SecretResponse))]
+[JsonSerializable(typeof(FolderCredentialData))]
 [ExcludeFromCodeCoverage]
 public partial class Json : JsonSerializerContext
 {

@@ -3,6 +3,7 @@ using BeyondTrust.SecretSafeProvider.Proto;
 using BeyondTrust.SecretSafeProvider.Serialization;
 using BeyondTrust.SecretSafeProvider.Services;
 using BeyondTrust.SecretSafeProvider.Services.DataSources;
+using BeyondTrust.SecretSafeProvider.Services.Resources;
 using Imposter.Abstractions;
 
 namespace BeyondTrust.SecretSafeProvider.Tests;
@@ -29,7 +30,7 @@ public class Terraform5ProviderServiceTests
             BaseUrl = ""
         };
 
-        _sut = new Terraform5ProviderService([_credentialImposter.Instance()], _configuration);
+        _sut = new Terraform5ProviderService([_credentialImposter.Instance()], [], _configuration);
     }
 
     [Test]
