@@ -1,0 +1,18 @@
+{
+  "Guid": "a1b2c3d4-000a-0000-0000-000000000010",
+  "Priority": 20,
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "RegexMatcher",
+          "Pattern": "^/public/v3/Secrets-Safe/Folders/[0-9a-fA-F\\-]+$"
+        }
+      ]
+    },
+    "Methods": [ "DELETE" ]
+  },
+  "Response": {
+    "StatusCode": 204
+  }
+}

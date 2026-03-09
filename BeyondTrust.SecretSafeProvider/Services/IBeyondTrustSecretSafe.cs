@@ -29,6 +29,18 @@ public interface IBeyondTrustSecretSafe
         [AliasAs("SecretMetadata")] CreateSecretFileRequest metadata,
         [AliasAs("File")] StreamPart file);
 
+    [Post($"{V3}/Secrets-Safe/Folders/")]
+    public Task<FolderResponse> CreateFolder([Body] FolderRequest request);
+
+    [Get($"{V3}/Secrets-Safe/Folders/{{id}}")]
+    public Task<FolderResponse> GetFolder(string id);
+
+    [Put($"{V3}/Secrets-Safe/Folders/{{id}}")]
+    public Task<FolderResponse> UpdateFolder(string id, [Body] FolderRequest request);
+
+    [Delete($"{V3}/Secrets-Safe/Folders/{{id}}")]
+    public Task<HttpResponseMessage> DeleteFolder(string id);
+
     [Post($"{V3}/Auth/Signout")]
     public Task<ApiResponse<HttpResponseMessage>> Signout();
 }

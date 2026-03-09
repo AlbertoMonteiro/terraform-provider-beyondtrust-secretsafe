@@ -1,0 +1,21 @@
+{
+  "Guid": "a1b2c3d4-000b-0000-0000-000000000011",
+  "Priority": 21,
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "RegexMatcher",
+          "Pattern": "^/public/v3/Secrets-Safe/Folders/contains-secrets$"
+        }
+      ]
+    },
+    "Methods": [ "DELETE" ]
+  },
+  "Response": {
+    "StatusCode": 409,
+    "BodyAsJson": {
+      "Error": "Cannot delete folder with secrets"
+    }
+  }
+}

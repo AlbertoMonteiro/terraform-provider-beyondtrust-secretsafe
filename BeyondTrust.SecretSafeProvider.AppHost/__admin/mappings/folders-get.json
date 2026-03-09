@@ -1,0 +1,28 @@
+{
+  "Guid": "a1b2c3d4-0008-0000-0000-000000000008",
+  "Priority": 10,
+  "Request": {
+    "Path": {
+      "Matchers": [
+        {
+          "Name": "RegexMatcher",
+          "Pattern": "^/public/v3/Secrets-Safe/Folders/[0-9a-fA-F\\-]+$"
+        }
+      ]
+    },
+    "Methods": [ "GET" ]
+  },
+  "Response": {
+    "StatusCode": 200,
+    "BodyAsJson": {
+      "Id": "5h55h4e4-g8f5-7d40-ef13-4567890123de",
+      "Name": "Test Folder",
+      "Description": "Test folder from WireMock",
+      "ParentId": null,
+      "UserGroupId": 1
+    },
+    "Headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
