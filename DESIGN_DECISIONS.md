@@ -64,13 +64,90 @@ Native AOT compilation with `PublishAot=true` and `TrimMode=full` means:
 
 ### Binary Size & Startup Performance
 
-With `StaticExecutable=true` and `OptimizationPreference=Size`:
+With `OptimizationPreference=Size`:
 
-- Final binary is ~15 MB (fully self-contained, no .NET runtime needed)
+- Final binary is ~17 MB (self-contained .NET runtime, no SDK needed at runtime)
 - Startup is sub-second (no JIT, no assembly loading)
-- No external dependencies in the final artifact
+- The only external runtime dependencies are `glibc` (≥ 2.36) and `libssl.so.3` (see next section)
 
 **Trade-off:** Slightly longer build time (compilation to native code) for dramatically faster runtime performance.
+
+## Linux Distribution Targeting: Why glibc, not musl/static
+
+### The problem
+
+The Terraform Registry exposes exactly **one** binary slot per `os_arch` (e.g. `linux_amd64`). That single binary must run on every Linux image where users invoke `terraform init`/`validate`/`plan`/`apply`. In our case the consumer images include:
+
+- `gcr.io/.../gsdk-terraform:0.0.4` — Debian 12 (glibc 2.36)
+- `gcr.io/.../terraform:0.0.13` — Alpine 3.23 (musl libc)
+- HashiCorp's official `hashicorp/terraform` (Alpine, musl)
+- Internal Ubuntu/RHEL build agents (glibc)
+
+We initially shipped `linux-musl-x64`. Inside Debian images Terraform reported the misleading error:
+
+```
+fork/exec .../terraform-provider-beyondtrust-secretsafe: no such file or directory
+```
+
+even though the file existed. The kernel was looking for the musl dynamic linker (`/lib/ld-musl-x86_64.so.1`), which doesn't exist on glibc systems, and reports the missing **interpreter** as a missing **executable** (a well-known Linux kernel quirk).
+
+### Why we cannot ship a single "universal" .NET binary like Go does
+
+Go produces fully-static, libc-free binaries because it implements its own syscall layer and runtime. .NET cannot do the same today, for two compounding reasons:
+
+1. **`PublishAot` + `StaticExecutable=true` only works against musl.** Statically linking glibc is unsupported and crashes the linker (see [dotnet/runtime#100230](https://github.com/dotnet/runtime/issues/100230)). Glibc itself is hostile to full static linking — `getaddrinfo`, NSS, locale and timezone code all `dlopen` plug-ins at runtime.
+2. **Even a statically-linked musl binary still `dlopen`s OpenSSL at runtime.** On Linux, .NET's TLS stack (`SslStream`, used by Kestrel for our gRPC mTLS channel) and `RSA.Create()` go through a native shim (`System.Security.Cryptography.Native.OpenSsl.so`) which `dlopen`s `libssl.so.3` from the host. Same for `RandomNumberGenerator`. The shim is bundled with the runtime, but the actual OpenSSL **must** come from the system. There is no "managed" / OpenSSL-free fallback in the BCL — see [dotnet/runtime#18911](https://github.com/dotnet/runtime/issues/18911), [dotnet/runtime#17773](https://github.com/dotnet/runtime/issues/17773), [dotnet/runtime#80654](https://github.com/dotnet/runtime/issues/80654) and the long-standing discussion in [dotnet/runtime#83791](https://github.com/dotnet/runtime/issues/83791) (static executable on Alpine).
+
+The first time we tried `linux-musl-x64 + StaticExecutable=true`, we got past the loader but immediately hit:
+
+```
+The type initializer for 'SR' threw an exception.
+ ---> System.TypeInitializationException: ...
+ ---> System.DllNotFoundException: Unable to load shared library 'libSystem.Security.Cryptography.Native.OpenSsl' or one of its dependencies.
+OpenSSL is required for algorithm 'RSAOpenSsl' but could not be found or loaded.
+```
+
+So even the most "Go-like" build .NET allows is not actually portable across distros without help.
+
+### Decision
+
+Build against **glibc 2.36 (Debian 12 bookworm)** and document the runtime requirement on Alpine.
+
+| Image | Works out of the box? | Required setup |
+|---|---|---|
+| Debian 12+, Ubuntu 22.04+, RHEL 9+ | ✅ | — |
+| Alpine 3.x | ✅ after install | `apk add --no-cache gcompat openssl` |
+
+`gcompat` provides a glibc-compatible loader (`/lib/ld-linux-x86-64.so.2` → musl shim) so the binary can launch. `openssl` provides `libssl.so.3` so the cryptography shim can complete its `dlopen`.
+
+**Why glibc 2.36 specifically:** if we link against a newer glibc (e.g. 2.39 from Ubuntu 24.04 or 2.41 from Debian 13), the binary fails on Debian 12 with `GLIBC_2.38 not found`. Bookworm is currently the **oldest** widely deployed glibc that the .NET 10 SDK supports building from, and forward compatibility is guaranteed by glibc's symbol versioning — so a binary linked against 2.36 also runs on every newer glibc.
+
+The CI build uses `debian:bookworm-slim` with the .NET 10 SDK installed via `dotnet-install.sh` (Microsoft no longer ships an `mcr.microsoft.com/dotnet/sdk:10.0-bookworm` image — the default `dotnet/sdk:10.0` is now Debian 13 / glibc 2.41).
+
+### Possible future solution: BouncyCastle TLS
+
+The only way to get a truly distro-agnostic, OpenSSL-free .NET provider would be to **replace `SslStream`/Kestrel's TLS layer with a fully managed implementation**, namely **BouncyCastle's `Org.BouncyCastle.Tls.TlsServerProtocol`**.
+
+This is a large piece of work — roughly:
+
+1. Replace `RSA.Create(2048)` and `CertificateRequest`/`X509Certificate2` generation in `CertificateGenerator.cs` with BouncyCastle equivalents (small change, ~50 LOC).
+2. Write a custom Kestrel `IConnectionListenerFactory` / `IMultiplexedConnectionListenerFactory` that wraps each accepted TCP socket with `TlsServerProtocol` instead of `SslStream`, and exposes the resulting `Stream` to the HTTP/2 pipeline (~200–400 LOC, including ALPN negotiation for `h2`, mTLS client cert validation, and session lifecycle).
+3. Ensure no other code path (e.g. `HttpClient` calls to the BeyondTrust API) reaches `SslStream`. Refit/`HttpClient` would need a `SocketsHttpHandler` configured with a custom `ConnectCallback` that does the same BouncyCastle wrapping, **or** that traffic accepts depending on the host's OpenSSL.
+
+Pros:
+
+- Single binary, zero runtime dependencies beyond the kernel + libc.
+- Works on Alpine without `gcompat`, on `FROM scratch` containers, on distroless images, etc.
+- Removes an entire class of "OpenSSL not found" / "OpenSSL version mismatch" support issues.
+
+Cons / why we deferred it:
+
+- Significant code volume in a security-sensitive area (TLS handshake, ALPN, cert validation).
+- BouncyCastle's TLS implementation is correct but slower than OpenSSL.
+- Maintenance burden: we'd own a custom Kestrel transport.
+- The `gcompat + openssl` workaround is one line in a Dockerfile and well understood by Alpine users.
+
+If the gcompat dependency becomes a blocker for a customer or the .NET team continues not to address [#80654](https://github.com/dotnet/runtime/issues/80654) / [#83791](https://github.com/dotnet/runtime/issues/83791), the BouncyCastle path is the documented escape hatch.
 
 ## mTLS with Self-Signed Certificates
 
