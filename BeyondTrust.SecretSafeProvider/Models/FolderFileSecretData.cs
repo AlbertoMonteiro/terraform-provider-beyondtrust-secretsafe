@@ -91,7 +91,7 @@ public class FolderFileSecretData
                     new Schema.Types.Attribute { Name = ID, Type = TfTypes.String, Description = "The ID (GUID) of the created file secret.", Computed = true },
                     new Schema.Types.Attribute { Name = FOLDER_ID, Type = TfTypes.String, Description = "The ID (GUID) of the folder where the file will be stored.", Required = true },
                     new Schema.Types.Attribute { Name = TITLE, Type = TfTypes.String, Description = "The title of the file secret.", Required = true },
-                    new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the file secret." },
+                    new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the file secret.", Optional = true },
                     new Schema.Types.Attribute { Name = FILE_NAME, Type = TfTypes.String, Description = "The name of the file.", Required = true },
                     new Schema.Types.Attribute { Name = FILE_HASH, Type = TfTypes.String, Description = "The hash of the file content.", Computed = true },
                     new Schema.Types.Attribute { Name = FILE_CONTENT_BASE64, Type = TfTypes.String, Description = "The file content encoded in base64.", Required = true, Sensitive = true },

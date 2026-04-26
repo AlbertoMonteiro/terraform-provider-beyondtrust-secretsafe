@@ -41,9 +41,9 @@ public class FolderResourceData
                 {
                     new Schema.Types.Attribute { Name = ID, Type = TfTypes.String, Description = "The ID (GUID) of the folder.", Computed = true },
                     new Schema.Types.Attribute { Name = NAME, Type = TfTypes.String, Description = "The name of the folder.", Required = true },
-                    new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the folder." },
-                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user. If not specified, defaults to the authenticated user." },
-                    new Schema.Types.Attribute { Name = PARENT_ID, Type = TfTypes.String, Description = "The ID of the parent folder." },
+                    new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the folder.", Optional = true },
+                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user. If not specified, defaults to the authenticated user.", Optional = true },
+                    new Schema.Types.Attribute { Name = PARENT_ID, Type = TfTypes.String, Description = "The ID of the parent folder.", Optional = true },
                     new Schema.Types.Attribute { Name = USER_GROUP_ID, Type = TfTypes.Number, Description = "The ID of the user group that owns the folder.", Required = true },
                 }
             }

@@ -87,7 +87,7 @@ public class FolderCredentialData
                     new Schema.Types.Attribute { Name = ID, Type = TfTypes.String, Description = "The ID (GUID) of the created credential secret.", Computed = true },
                     new Schema.Types.Attribute { Name = FOLDER_ID, Type = TfTypes.String, Description = "The ID (GUID) of the folder where the credential will be stored.", Required = true },
                     new Schema.Types.Attribute { Name = TITLE, Type = TfTypes.String, Description = "The title of the credential secret.", Required = true },
-                    new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the credential secret." },
+                    new Schema.Types.Attribute { Name = DESCRIPTION, Type = TfTypes.String, Description = "The description of the credential secret.", Optional = true },
                     new Schema.Types.Attribute { Name = USERNAME, Type = TfTypes.String, Description = "The username for the credential.", Required = true },
                     new Schema.Types.Attribute { Name = PASSWORD, Type = TfTypes.String, Description = "The password for the credential.", Required = true, Sensitive = true },
                     new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user (automatically set to authenticated user).", Computed = true },
