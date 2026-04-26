@@ -56,23 +56,7 @@ Complete documentation is available in the `/docs` directory:
 
 - **Terraform** >= 0.12
 - **BeyondTrust Secret Safe** instance with API access
-- **Linux x64 (glibc)** — the released `linux_amd64` binary is built against glibc 2.36 (Debian 12 / Ubuntu 22.04 or newer).
-
-### Running on Alpine-based images
-
-The provider depends on OpenSSL via `dlopen` (used by ASP.NET Core's TLS stack for the mTLS gRPC channel that Terraform requires). On Alpine (musl libc) you must install a glibc shim and OpenSSL:
-
-```dockerfile
-RUN apk add --no-cache gcompat openssl
-```
-
-Without `gcompat`, Terraform reports the misleading error:
-
-```
-fork/exec .../terraform-provider-beyondtrust-secretsafe: no such file or directory
-```
-
-even though the binary file exists — the kernel cannot resolve the glibc dynamic linker.
+- **Linux x64** — the released `linux_amd64` binary is fully static (musl + statically-linked OpenSSL) and runs on any glibc or musl distro, including `FROM scratch` and distroless images, with no extra setup.
 
 ## Development
 
@@ -109,10 +93,11 @@ dotnet run --project BeyondTrust.SecretSafeProvider.Tests/BeyondTrust.SecretSafe
 Build a self-contained, trimmed binary for Linux/Alpine:
 
 ```bash
-# Inside Alpine Docker container with musl toolchain
-dotnet publish -c Release -r linux-musl-x64 -o /app/publish \
-  -p:PublishAot=true -p:StaticExecutable=true
+# Inside Alpine Docker container with musl + OpenSSL static toolchain
+dotnet publish -c Release -r linux-musl-x64 -o /app/publish --self-contained true
 ```
+
+The static linking is configured via project properties (`PublishAot`, `StaticExecutable`, `StaticOpenSslLinking`, `InvariantGlobalization`) in `BeyondTrust.SecretSafeProvider.csproj`. See [`DESIGN_DECISIONS.md`](./DESIGN_DECISIONS.md) for details.
 
 ### Project Structure
 

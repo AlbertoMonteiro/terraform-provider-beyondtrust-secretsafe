@@ -19,9 +19,12 @@ dotnet build BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.cspro
 dotnet run --project BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj
 
 # Publish as native AOT binary for Linux/Alpine (must run inside Alpine Docker)
-dotnet publish -c Release -r linux-musl-x64 -o /app/publish \
-    -p:PublishAot=true -p:StaticExecutable=true
+dotnet publish -c Release -r linux-musl-x64 -o /app/publish --self-contained true
 ```
+
+The build properties (`PublishAot`, `StaticExecutable=true`, `StaticOpenSslLinking=true`,
+`InvariantGlobalization=true`) live in the `.csproj`, producing a fully static binary with
+OpenSSL linked in. See `DESIGN_DECISIONS.md` for the rationale.
 
 For Alpine-targeted builds, use a Docker container with musl toolchain:
 ```dockerfile
@@ -64,7 +67,8 @@ Nothing else may be written to stdout before this line.
 
 - `PublishTrimmed=true` with `TrimMode=full` — avoid reflection-based patterns; use source generators
 - `StackTraceSupport=false` and `OptimizationPreference=Size` — binary size optimized
-- `StaticExecutable=true` — statically linked (requires musl on Linux)
+- `StaticExecutable=true` + `StaticOpenSslLinking=true` — fully static binary with OpenSSL linked in (requires musl + `openssl-libs-static` on the build host)
+- `InvariantGlobalization=true` — disables ICU; if turned off, also enable `StaticICULinking` to keep the binary self-contained
 - gRPC protobuf source generation happens at build time via `<Protobuf>` items in the `.csproj`
 
 ### Terraform Registry Packaging

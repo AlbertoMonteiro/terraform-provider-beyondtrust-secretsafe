@@ -1,8 +1,15 @@
-# Stage 1: AOT publish for Alpine (musl).
-# gcompat provides a glibc compatibility layer so Grpc.Tools' glibc protoc binary runs on musl.
+# Stage 1: AOT publish for Alpine (musl) with statically linked OpenSSL.
+# - openssl-libs-static is required by StaticOpenSslLinking=true (set in csproj).
+# - gcompat provides a glibc compatibility layer so Grpc.Tools' glibc protoc binary
+#   can run during the build. It is NOT included in the final binary.
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 
-RUN apk add --no-cache clang gcc build-base zlib-dev musl-dev gcompat
+RUN apk add --no-cache \
+    clang gcc build-base \
+    zlib-dev zlib-static \
+    musl-dev cmake \
+    openssl-dev openssl-libs-static \
+    gcompat
 
 WORKDIR /src
 COPY BeyondTrust.SecretSafeProvider/ ./BeyondTrust.SecretSafeProvider/
@@ -10,7 +17,7 @@ COPY BeyondTrust.SecretSafeProvider/ ./BeyondTrust.SecretSafeProvider/
 RUN dotnet publish BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj \
     -c Release \
     -r linux-musl-x64 \
-    -p:StaticExecutable=false \
+    --self-contained true \
     -o /publish
 
 # Stage 2: run terraform plan against the provider

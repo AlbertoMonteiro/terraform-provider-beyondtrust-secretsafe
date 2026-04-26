@@ -20,8 +20,9 @@ jobs:
     strategy:
       matrix:
         include:
-          # Linux (glibc — compatible with Debian/Ubuntu/RHEL based images; also runs on Alpine via gcompat)
-          - { os: linux,   arch: amd64, rid: linux-x64,        platform: linux/amd64,  runner: ubuntu-latest,    use_qemu: false }
+          # Linux (musl + statically linked OpenSSL — single fully-static binary that
+          # runs on glibc and musl distros without external libssl/gcompat).
+          - { os: linux,   arch: amd64, rid: linux-musl-x64,   platform: linux/amd64,  runner: ubuntu-latest,    use_qemu: false }
           - { os: windows, arch: amd64, rid: win-x64,          runner: windows-latest, use_qemu: false }
 
     steps:
@@ -34,28 +35,34 @@ jobs:
         if: matrix.use_qemu
         uses: docker/setup-qemu-action@v3
 
-      # Build inside Debian 12 (bookworm, glibc 2.36) for maximum runtime compatibility.
-      # Linking against an older glibc lets the binary also run on newer distros (Ubuntu,
-      # Debian 13, RHEL 9+) and on Alpine when `gcompat` + `openssl` are installed.
-      - name: Build via Debian bookworm Docker (Native AOT / glibc 2.36)
+      # Build inside Alpine with the .NET 10 SDK. We produce a fully static binary
+      # (StaticExecutable=true) with OpenSSL statically linked into the cryptography
+      # native shim (StaticOpenSslLinking=true). The result has no runtime dependency
+      # on libssl, ICU, glibc or gcompat and runs on every Linux x64 distro.
+      #
+      # gcompat is installed only inside the build image so the glibc-only protoc
+      # binary shipped by Grpc.Tools can run during the build; it is not included
+      # in the final binary.
+      - name: Build via Alpine Docker (Native AOT / fully static / static OpenSSL)
         if: matrix.os == 'linux'
         run: |
           docker run --rm \
             --platform ${{ matrix.platform }} \
             -v "${{ github.workspace }}:/src" \
             -w /src \
-            debian:bookworm-slim \
+            mcr.microsoft.com/dotnet/sdk:10.0-alpine \
             sh -c "
               set -e && \
-              apt-get update -qq && \
-              apt-get install -y -qq --no-install-recommends ca-certificates curl clang zlib1g-dev libssl-dev && \
-              curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel ${DOTNET_VERSION} --install-dir /usr/share/dotnet && \
-              /usr/share/dotnet/dotnet publish BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj \
+              apk add --no-cache \
+                clang gcc build-base \
+                zlib-dev zlib-static \
+                musl-dev cmake \
+                openssl-dev openssl-libs-static \
+                gcompat && \
+              dotnet publish BeyondTrust.SecretSafeProvider/BeyondTrust.SecretSafeProvider.csproj \
                 -c Release \
                 -r ${{ matrix.rid }} \
                 -o /src/dist/${{ matrix.os }}_${{ matrix.arch }} \
-                -p:PublishAot=true \
-                -p:StaticExecutable=false \
                 --self-contained true
             "
 
@@ -88,7 +95,17 @@ jobs:
           ZIPNAME="${BINARY}_${VERSION}_${{ matrix.os }}_${{ matrix.arch }}.zip"
 
           cp "dist/${{ matrix.os }}_${{ matrix.arch }}/${BINARY}" "${BINARY}"
-          zip "${ZIPNAME}" "${BINARY}"
+
+          # Linux binary statically links OpenSSL (Apache 2.0); ship the license
+          # alongside the binary to satisfy redistribution requirements. macOS uses
+          # SecureTransport and Windows uses Schannel, so they don't bundle it.
+          if [ "${{ matrix.os }}" = "linux" ]; then
+            cp THIRD_PARTY_LICENSES/OPENSSL-LICENSE.txt OPENSSL-LICENSE
+            zip "${ZIPNAME}" "${BINARY}" OPENSSL-LICENSE
+            rm OPENSSL-LICENSE
+          else
+            zip "${ZIPNAME}" "${BINARY}"
+          fi
           rm "${BINARY}"
           echo "Built: ${ZIPNAME}"
 
