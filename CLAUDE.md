@@ -40,16 +40,17 @@ To test the provider with the real Terraform CLI on Windows, publish the AOT bin
 # The AOT link step calls vswhere.exe, which is not on the PATH by default
 $env:PATH = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer;$env:PATH"
 
-# Publishes win-x86 to dist/. It deletes dist/ first, so do not run it while Terraform is using the binary
+# Publishes win-x86 to dist/ and deletes terraform/.terraform and its lock file.
+# It deletes dist/ first, so do not run it while Terraform is using the binary
 ./publish-dev.ps1
 
-cd terraform
-$env:TF_CLI_CONFIG_FILE = "$PWD\dev.tfrc"
-terraform plan
+# Sets TF_CLI_CONFIG_FILE to terraform/dev.tfrc, then runs terraform init and plan on terraform/
+./test-provider-local.ps1
 ```
 
 - `terraform/dev.tfrc` holds the `dev_overrides` entry for `albertomonteiro/beyondtrust-secretsafe`. The key must match the `source` in `required_providers` exactly.
-- Do not run `terraform init` to test local changes. With no matching override, it downloads the published provider from the registry, and Terraform then rejects anything newer, such as a new argument, as unsupported.
+- Running `terraform` by hand needs `$env:TF_CLI_CONFIG_FILE` set first. Without a matching override, Terraform uses the published provider from the registry and rejects anything newer, such as a new argument, as unsupported.
+- `terraform init` still downloads the published provider and warns that it can be skipped. That is expected: the override wins when `plan` runs.
 - If a new provider argument is rejected, check which binary is in use: the "development overrides" warning must list `..\dist`.
 - `terraform/` is in a public repository. Pass credentials with `TF_VAR_*` variables, not in `main.tf`. State files hold secrets in plain text and are ignored by `terraform/.gitignore`.
 
