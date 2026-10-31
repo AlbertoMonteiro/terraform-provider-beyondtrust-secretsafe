@@ -1,4 +1,5 @@
 using BeyondTrust.SecretSafeProvider.Proto;
+using BeyondTrust.SecretSafeProvider.Serialization;
 using Google.Protobuf;
 using MessagePack;
 
@@ -26,6 +27,9 @@ public class FolderFileSecretData
     private const string OWNER_TYPE = "owner_type";
     private const string NOTES = "notes";
 
+    // The file content cannot be updated in place, so any change replaces the secret
+    public static IReadOnlySet<string> ReplaceAttributes { get; } = new HashSet<string> { FOLDER_ID, TITLE, DESCRIPTION, FILE_NAME, FILE_CONTENT_BASE64, OWNER_ID };
+
     [Key(ID)]
     public string? Id { get; set; }
 
@@ -48,19 +52,20 @@ public class FolderFileSecretData
     public required string FileContentBase64 { get; set; }
 
     [Key(OWNER_ID)]
-    public required long OwnerId { get; set; }
+    public long? OwnerId { get; set; }
 
     [Key(OWNERS)]
+    [MessagePackFormatter(typeof(OwnerInfoListFormatter))]
     public IList<OwnerInfo>? Owners { get; set; }
 
     [Key(CREATED_ON)]
-    public DateTime? CreatedOn { get; set; }
+    public string? CreatedOn { get; set; }
 
     [Key(CREATED_BY)]
     public string? CreatedBy { get; set; }
 
     [Key(MODIFIED_ON)]
-    public DateTime? ModifiedOn { get; set; }
+    public string? ModifiedOn { get; set; }
 
     [Key(MODIFIED_BY)]
     public string? ModifiedBy { get; set; }
@@ -95,7 +100,7 @@ public class FolderFileSecretData
                     new Schema.Types.Attribute { Name = FILE_NAME, Type = TfTypes.String, Description = "The name of the file.", Required = true },
                     new Schema.Types.Attribute { Name = FILE_HASH, Type = TfTypes.String, Description = "The hash of the file content.", Computed = true },
                     new Schema.Types.Attribute { Name = FILE_CONTENT_BASE64, Type = TfTypes.String, Description = "The file content encoded in base64.", Required = true, Sensitive = true },
-                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user (automatically set to authenticated user).", Computed = true },
+                    new Schema.Types.Attribute { Name = OWNER_ID, Type = TfTypes.Number, Description = "The ID of the owner user. If not specified, defaults to the authenticated user.", Optional = true, Computed = true },
                     new Schema.Types.Attribute { Name = OWNERS, Type = TfTypes.List(TfTypes.Object(new Dictionary<string, ByteString> { { "owner_id", TfTypes.Number } })), Description = "List of owner IDs (computed from authenticated user).", Computed = true },
                     new Schema.Types.Attribute { Name = CREATED_ON, Type = TfTypes.String, Description = "The timestamp when the file was created.", Computed = true },
                     new Schema.Types.Attribute { Name = CREATED_BY, Type = TfTypes.String, Description = "The user who created the file.", Computed = true },

@@ -1,4 +1,4 @@
-using MessagePack;
+using System.Text.Json.Serialization;
 
 namespace BeyondTrust.SecretSafeProvider.Models;
 
@@ -8,9 +8,7 @@ public record CreateSecretCredentialRequest(
     string Username,
     string Password,
     long OwnerId,
-    IList<OwnerInfo>? Owners = null);
+    IList<OwnerInfo>? Owners = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? FolderId = null);
 
-[MessagePackObject]
-public record OwnerInfo(
-    [property: Key(0)]
-    long OwnerId);
+public record OwnerInfo(long OwnerId);

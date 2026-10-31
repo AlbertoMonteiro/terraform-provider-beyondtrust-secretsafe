@@ -6,4 +6,5 @@ public record CreateSecretFileRequest(
     string FileName,
     string FileContent,
     long OwnerId,
-    IList<OwnerInfo>? Owners = null);
+    IList<OwnerInfo>? Owners = null,
+    string? FolderId = null);

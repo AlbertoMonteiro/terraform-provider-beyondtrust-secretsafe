@@ -5,4 +5,4 @@ public record FolderResponse(
     string Name,
     string? Description,
     string? ParentId,
-    long UserGroupId);
+    long? UserGroupId);

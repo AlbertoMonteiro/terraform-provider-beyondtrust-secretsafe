@@ -3,4 +3,6 @@
 public interface IBeyondTrustApiFactory
 {
     IBeyondTrustSecretSafe CreateApi();
+
+    Task<long> GetOAuthUserId();
 }

@@ -10,6 +10,7 @@ public class FolderResourceHandler(
 {
     public const string TYPE_NAME = "secretsafe_folder";
     public string TypeName => TYPE_NAME;
+    public IReadOnlySet<string> ReplaceAttributes { get; } = new HashSet<string>();
 
     public Schema GetSchema() => FolderResourceData.GetSchema();
 
@@ -36,18 +37,18 @@ public class FolderResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
+            await secretSafe.OpenSession(configuration);
             var folderResponse = await secretSafe.GetFolder(resourceData.Id);
-            await secretSafe.Signout();
+            await secretSafe.CloseSession(configuration);
 
             var result = new FolderResourceData
             {
                 Id = folderResponse.Id,
                 Name = folderResponse.Name,
-                Description = folderResponse.Description,
+                Description = string.IsNullOrEmpty(folderResponse.Description) ? resourceData.Description : folderResponse.Description,
                 OwnerId = resourceData.OwnerId,
                 ParentId = folderResponse.ParentId,
-                UserGroupId = folderResponse.UserGroupId
+                UserGroupId = folderResponse.UserGroupId ?? resourceData.UserGroupId
             };
 
             return new ReadResource.Types.Response
@@ -79,30 +80,42 @@ public class FolderResourceHandler(
             var plannedState = SmartSerializer.Deserialize<FolderResourceData>(request.PlannedState);
             var resourceData = SmartSerializer.Deserialize<FolderResourceData>(request.PriorState);
 
-            if (plannedState == null)
-            {
-                return new ApplyResourceChange.Types.Response
-                {
-                    Diagnostics =
-                    {
-                        new Diagnostic()
-                        {
-                            Severity = Diagnostic.Types.Severity.Error,
-                            Summary = "Invalid State",
-                            Detail = "Planned state is missing"
-                        }
-                    }
-                };
-            }
-
             var secretSafe = apiFactory.CreateApi();
 
-            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
+            var session = await secretSafe.OpenSession(configuration);
+
+            // Terraform plans a null object when destroying
+            if (plannedState is null)
+            {
+                using var deleteResponse = await secretSafe.DeleteFolder(resourceData.Id);
+                await secretSafe.CloseSession(configuration);
+
+                if (deleteResponse.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    return new ApplyResourceChange.Types.Response
+                    {
+                        Diagnostics =
+                        {
+                            new Diagnostic()
+                            {
+                                Severity = Diagnostic.Types.Severity.Error,
+                                Summary = "Cannot Delete Folder",
+                                Detail = "The folder contains secrets. Please delete all secrets before deleting the folder."
+                            }
+                        }
+                    };
+                }
+
+                if (deleteResponse.StatusCode != System.Net.HttpStatusCode.NotFound)
+                    deleteResponse.EnsureSuccessStatusCode();
+
+                return new ApplyResourceChange.Types.Response { NewState = request.PlannedState };
+            }
 
             FolderResponse folderResponse;
 
             // Use authenticated user ID if OwnerId not provided
-            var ownerId = plannedState.OwnerId ?? signAppinResponse.UserId;
+            var ownerId = await apiFactory.ResolveOwnerId(session, plannedState.OwnerId);
 
             // Create if no prior state
             if (string.IsNullOrEmpty(resourceData?.Id))
@@ -129,47 +142,16 @@ public class FolderResourceHandler(
                 folderResponse = await secretSafe.UpdateFolder(resourceData.Id, folderRequest);
             }
 
-            // Handle delete if planned state is empty (Terraform delete)
-            if (request.PlannedState.Msgpack.IsEmpty && request.PlannedState.Json.IsEmpty)
-            {
-                if (!string.IsNullOrEmpty(resourceData?.Id))
-                {
-                    var deleteResponse = await secretSafe.DeleteFolder(resourceData.Id);
-                    if (deleteResponse.StatusCode == System.Net.HttpStatusCode.Conflict)
-                    {
-                        await secretSafe.Signout();
-                        return new ApplyResourceChange.Types.Response
-                        {
-                            Diagnostics =
-                            {
-                                new Diagnostic()
-                                {
-                                    Severity = Diagnostic.Types.Severity.Error,
-                                    Summary = "Cannot Delete Folder",
-                                    Detail = "The folder contains secrets. Please delete all secrets before deleting the folder."
-                                }
-                            }
-                        };
-                    }
-                }
-
-                await secretSafe.Signout();
-                return new ApplyResourceChange.Types.Response
-                {
-                    NewState = new DynamicValue()
-                };
-            }
-
-            await secretSafe.Signout();
+            await secretSafe.CloseSession(configuration);
 
             var result = new FolderResourceData
             {
                 Id = folderResponse.Id,
-                Name = folderResponse.Name,
-                Description = folderResponse.Description,
+                Name = plannedState.Name,
+                Description = plannedState.Description,
                 OwnerId = plannedState.OwnerId,
-                ParentId = folderResponse.ParentId,
-                UserGroupId = folderResponse.UserGroupId
+                ParentId = plannedState.ParentId,
+                UserGroupId = plannedState.UserGroupId
             };
 
             return new ApplyResourceChange.Types.Response

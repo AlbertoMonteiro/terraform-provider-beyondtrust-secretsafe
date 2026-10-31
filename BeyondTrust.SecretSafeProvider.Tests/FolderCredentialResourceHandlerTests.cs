@@ -128,18 +128,15 @@ public class FolderCredentialResourceHandlerTests
         var signAppinResponse = new SignAppinResponse(UserId: userId, SID: "test-sid", EmailAddress: "test@example.com", UserName: "testuser", Name: "Test User");
         imposter.SignAppin(new KeyAndRunAs(_configuration.Key, _configuration.RunAs)).ReturnsAsync(signAppinResponse);
 
-        var secretResponse = new SecretResponse(
-            Id: secretId,
-            Title: plannedCredential.Title,
-            Description: plannedCredential.Description,
-            OwnerId: userId);
+        var updatedSecret = new SecretValue(OwnerId: userId, ModifiedBy: "testuser");
         var updateRequest = new CreateSecretCredentialRequest(
             plannedCredential.Title,
             plannedCredential.Description,
             plannedCredential.Username,
             plannedCredential.Password,
-            userId);
-        imposter.UpdateCredentialSecret(secretId, updateRequest).ReturnsAsync(secretResponse);
+            userId,
+            FolderId: folderId);
+        imposter.GetSecret(Guid.Parse(secretId)).ReturnsAsync(updatedSecret);
 
         // Act
         var result = await _sut.ApplyAsync(applyRequest);
@@ -153,6 +150,7 @@ public class FolderCredentialResourceHandlerTests
         await Assert.That(resultData.Id).IsEqualTo(secretId);
         await Assert.That(resultData.Title).IsEqualTo(plannedCredential.Title);
         await Assert.That(resultData.Username).IsEqualTo(plannedCredential.Username);
+        await Assert.That(resultData.ModifiedBy).IsEqualTo(updatedSecret.ModifiedBy);
     }
 
     [Test]
