@@ -2,6 +2,7 @@ using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Proto;
 using BeyondTrust.SecretSafeProvider.Serialization;
 using BeyondTrust.SecretSafeProvider.Services.DataSources;
+using BeyondTrust.SecretSafeProvider.Services.EphemeralResources;
 using BeyondTrust.SecretSafeProvider.Services.Resources;
 using Grpc.Core;
 
@@ -10,12 +11,15 @@ namespace BeyondTrust.SecretSafeProvider.Services;
 public class Terraform5ProviderService(
     IEnumerable<IDataSourceHandler> dataSourceHandlers,
     IEnumerable<IResourceHandler> resourceHandlers,
+    IEnumerable<IEphemeralResourceHandler> ephemeralResourceHandlers,
     ProviderConfiguration configuration) : Provider.ProviderBase
 {
     private readonly IReadOnlyDictionary<string, IDataSourceHandler> _dataSourceHandlers =
         dataSourceHandlers.ToDictionary(h => h.TypeName);
     private readonly IReadOnlyDictionary<string, IResourceHandler> _resourceHandlers =
         resourceHandlers.ToDictionary(h => h.TypeName);
+    private readonly IReadOnlyDictionary<string, IEphemeralResourceHandler> _ephemeralResourceHandlers =
+        ephemeralResourceHandlers.ToDictionary(h => h.TypeName);
     private readonly ProviderConfiguration _configuration = configuration;
 
     public override Task<GetProviderSchema.Types.Response> GetSchema(GetProviderSchema.Types.Request request, ServerCallContext context)
@@ -27,6 +31,9 @@ public class Terraform5ProviderService(
 
         foreach (var handler in _resourceHandlers.Values)
             response.ResourceSchemas[handler.TypeName] = handler.GetSchema();
+
+        foreach (var handler in _ephemeralResourceHandlers.Values)
+            response.EphemeralResourceSchemas[handler.TypeName] = handler.GetSchema();
 
         response.Provider = ProviderConfiguration.GetSchema();
 
@@ -195,6 +202,57 @@ public class Terraform5ProviderService(
             };
         }
     }
+
+    public override Task<ValidateEphemeralResourceConfig.Types.Response> ValidateEphemeralResourceConfig(ValidateEphemeralResourceConfig.Types.Request request, ServerCallContext context)
+        => Task.FromResult(new ValidateEphemeralResourceConfig.Types.Response());
+
+    public override async Task<OpenEphemeralResource.Types.Response> OpenEphemeralResource(OpenEphemeralResource.Types.Request request, ServerCallContext context)
+    {
+        if (!_ephemeralResourceHandlers.TryGetValue(request.TypeName, out var handler))
+            return new OpenEphemeralResource.Types.Response
+            {
+                Diagnostics =
+                {
+                    new Diagnostic
+                    {
+                        Severity = Diagnostic.Types.Severity.Error,
+                        Summary  = $"Unsupported ephemeral resource \"{request.TypeName}\"",
+                        Detail   = $"""
+                                   The provider does not implement the ephemeral resource "{request.TypeName}".
+                                   Available ephemeral resources: {string.Join(", ", _ephemeralResourceHandlers.Keys)}.
+                                   """
+                    }
+                }
+            };
+
+        try
+        {
+            return await handler.OpenAsync(request);
+        }
+        catch (Exception ex)
+        {
+            return new OpenEphemeralResource.Types.Response
+            {
+                Diagnostics =
+                {
+                    new Diagnostic
+                    {
+                        Severity = Diagnostic.Types.Severity.Error,
+                        Summary  = $"Error opening ephemeral resource \"{request.TypeName}\"",
+                        Detail   = ex.Message,
+                    }
+                }
+            };
+        }
+    }
+
+    // Secrets are static values with no lease, so open never asks Terraform to renew them
+    public override Task<RenewEphemeralResource.Types.Response> RenewEphemeralResource(RenewEphemeralResource.Types.Request request, ServerCallContext context)
+        => Task.FromResult(new RenewEphemeralResource.Types.Response());
+
+    // The API key session is already closed when open returns, so there is nothing to release
+    public override Task<CloseEphemeralResource.Types.Response> CloseEphemeralResource(CloseEphemeralResource.Types.Request request, ServerCallContext context)
+        => Task.FromResult(new CloseEphemeralResource.Types.Response());
 
     public override Task<Stop.Types.Response> Stop(Stop.Types.Request request, ServerCallContext context)
         => Task.FromResult(new Stop.Types.Response());

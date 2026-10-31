@@ -21,16 +21,7 @@ public class CredentialDataSourceHandler(
 
         try
         {
-            await secretSafe.OpenSession(configuration);
-            var secretResponse = await secretSafe.GetSecret(Guid.Parse(input.SecretId));
-            await secretSafe.CloseSession(configuration);
-
-            var result = new CredentialData
-            {
-                SecretId = input.SecretId,
-                Username = secretResponse.Username ?? string.Empty,
-                Password = secretResponse.Password ?? string.Empty,
-            };
+            var result = await secretSafe.ReadCredential(configuration, input.SecretId);
 
             return new ReadDataSource.Types.Response
             {
@@ -45,6 +36,7 @@ public class CredentialDataSourceHandler(
                 {
                     new Diagnostic()
                     {
+                        Severity = Diagnostic.Types.Severity.Error,
                         Detail = ex.Message,
                         Summary = "Error"
                     }

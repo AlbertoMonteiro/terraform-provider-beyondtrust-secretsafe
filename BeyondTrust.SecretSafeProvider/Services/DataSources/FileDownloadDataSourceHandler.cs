@@ -21,19 +21,7 @@ public class FileDownloadDataSourceHandler(
 
         try
         {
-            await secretSafe.OpenSession(configuration);
-            var response = await secretSafe.DownloadSecret(Guid.Parse(input.SecretId));
-            await secretSafe.CloseSession(configuration);
-
-            var contentBytes = await response.Content.ReadAsByteArrayAsync();
-            var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? string.Empty;
-
-            var result = new FileDownloadData
-            {
-                SecretId = input.SecretId,
-                FileName = fileName,
-                FileContentBase64 = Convert.ToBase64String(contentBytes),
-            };
+            var result = await secretSafe.ReadFile(configuration, input.SecretId);
 
             return new ReadDataSource.Types.Response
             {
@@ -48,6 +36,7 @@ public class FileDownloadDataSourceHandler(
                 {
                     new Diagnostic()
                     {
+                        Severity = Diagnostic.Types.Severity.Error,
                         Detail = ex.Message,
                         Summary = "Error"
                     }

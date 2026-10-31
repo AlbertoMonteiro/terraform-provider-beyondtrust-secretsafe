@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-A Terraform provider for BeyondTrust Secret Safe, implemented in C# (.NET 10) using Native AOT compilation. It implements the Terraform Plugin Protocol v5.2 over gRPC/mTLS.
+A Terraform provider for BeyondTrust Secret Safe, implemented in C# (.NET 10) using Native AOT compilation. It implements the Terraform Plugin Protocol v5.10 over gRPC/mTLS.
 
 ## Build Commands
 
@@ -60,7 +60,7 @@ The local Docker daemon is Rancher Desktop, which the integration tests and the 
 
 ## Architecture
 
-### Terraform Plugin Protocol v5.2 Handshake
+### Terraform Plugin Protocol v5.10 Handshake
 
 When Terraform spawns the provider binary, it reads a single line from stdout before doing anything else. `Program.cs` emits this on `ApplicationStarted`:
 
@@ -81,12 +81,12 @@ Nothing else may be written to stdout before this line.
 
 ### Proto Files
 
-- `Protos/tfplugin5.2.proto` — official HashiCorp Terraform Plugin Protocol v5.2 definition (do not modify). Generates the `Provider` and `Provisioner` gRPC service stubs under namespace `CSF.Terraform.SecretSafe`.
+- `Protos/tfplugin5.10.proto` — official HashiCorp Terraform Plugin Protocol v5.10 definition, taken from the `v1.17.1` release tag. The only local change is `option csharp_namespace`. Generates the `Provider` and `Provisioner` gRPC service stubs under namespace `BeyondTrust.SecretSafeProvider.Proto`, and the test project has its own copy. Do not modify it otherwise: to move to a newer protocol, copy the file from a newer release tag.
 - `Protos/greet.proto` — template/placeholder leftover from project scaffolding; to be replaced with the actual provider service implementation.
 
 ### Current State (Work in Progress)
 
-- `Services/GreeterService.cs` is a scaffolding placeholder. The real implementation must subclass `Provider.ProviderBase` (generated from `tfplugin5.2.proto`) and implement all RPCs: `GetSchema`, `PrepareProviderConfig`, `Configure`, `ReadResource`, `PlanResourceChange`, `ApplyResourceChange`, `ImportResourceState`, `ReadDataSource`, `ValidateResourceTypeConfig`, `ValidateDataSourceConfig`, `UpgradeResourceState`, and `Stop`.
+- `Services/GreeterService.cs` is a scaffolding placeholder. The real implementation must subclass `Provider.ProviderBase` (generated from `tfplugin5.10.proto`) and implement all RPCs: `GetSchema`, `PrepareProviderConfig`, `Configure`, `ReadResource`, `PlanResourceChange`, `ApplyResourceChange`, `ImportResourceState`, `ReadDataSource`, `ValidateResourceTypeConfig`, `ValidateDataSourceConfig`, `UpgradeResourceState`, and `Stop`.
 - `CertificateGenerator.cs` contains placeholder base64 content — it must be replaced with actual PKCS#12 certificate generation logic before the provider can function.
 
 ### AOT Constraints

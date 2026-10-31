@@ -3,6 +3,7 @@ using BeyondTrust.SecretSafeProvider;
 using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Services;
 using BeyondTrust.SecretSafeProvider.Services.DataSources;
+using BeyondTrust.SecretSafeProvider.Services.EphemeralResources;
 using BeyondTrust.SecretSafeProvider.Services.Resources;
 using Refit;
 
@@ -34,6 +35,8 @@ builder.Services.AddSingleton<IBeyondTrustApiFactory, BeyondTrustApiFactory>();
 builder.Services.AddSingleton(emptyConfiguration);
 builder.Services.AddSingleton<IDataSourceHandler, CredentialDataSourceHandler>();
 builder.Services.AddSingleton<IDataSourceHandler, FileDownloadDataSourceHandler>();
+builder.Services.AddSingleton<IEphemeralResourceHandler, CredentialEphemeralResourceHandler>();
+builder.Services.AddSingleton<IEphemeralResourceHandler, FileDownloadEphemeralResourceHandler>();
 builder.Services.AddSingleton<IResourceHandler, FolderCredentialResourceHandler>();
 builder.Services.AddSingleton<IResourceHandler, FolderFileSecretResourceHandler>();
 builder.Services.AddSingleton<IResourceHandler, FolderResourceHandler>();

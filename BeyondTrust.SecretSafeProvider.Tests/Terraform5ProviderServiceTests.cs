@@ -3,6 +3,7 @@ using BeyondTrust.SecretSafeProvider.Proto;
 using BeyondTrust.SecretSafeProvider.Serialization;
 using BeyondTrust.SecretSafeProvider.Services;
 using BeyondTrust.SecretSafeProvider.Services.DataSources;
+using BeyondTrust.SecretSafeProvider.Services.EphemeralResources;
 using BeyondTrust.SecretSafeProvider.Services.Resources;
 using Imposter.Abstractions;
 
@@ -13,6 +14,7 @@ public class Terraform5ProviderServiceTests
     private readonly Terraform5ProviderService _sut;
     private readonly IDataSourceHandler _credentialDataSourceHandler;
     private readonly IDataSourceHandlerImposter _credentialImposter;
+    private readonly IEphemeralResourceHandlerImposter _ephemeralCredentialImposter;
     private readonly ProviderConfiguration _configuration;
 
     public Terraform5ProviderServiceTests()
@@ -23,6 +25,11 @@ public class Terraform5ProviderServiceTests
 
         _credentialDataSourceHandler = _credentialImposter.Instance();
 
+        _ephemeralCredentialImposter = IEphemeralResourceHandler.Imposter();
+
+        _ephemeralCredentialImposter.TypeName.Getter().Returns("secretsafe_credential_data");
+        _ephemeralCredentialImposter.GetSchema().Returns(new Schema { Version = 1, Block = new Schema.Types.Block() });
+
         _configuration = new ProviderConfiguration
         {
             Key = "",
@@ -30,7 +37,7 @@ public class Terraform5ProviderServiceTests
             BaseUrl = ""
         };
 
-        _sut = new Terraform5ProviderService([_credentialImposter.Instance()], [], _configuration);
+        _sut = new Terraform5ProviderService([_credentialImposter.Instance()], [], [_ephemeralCredentialImposter.Instance()], _configuration);
     }
 
     [Test]
@@ -200,6 +207,111 @@ public class Terraform5ProviderServiceTests
         await Assert.That(result.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Error);
         await Assert.That(result.Diagnostics[0].Summary).IsEqualTo("Error reading data source \"secretsafe_credential_data\"");
         await Assert.That(result.Diagnostics[0].Detail).IsEqualTo(exceptionMessage);
+    }
+
+    [Test]
+    public async Task GetSchema_WithEphemeralHandler_ReturnsEphemeralResourceSchema()
+    {
+        // Arrange
+        _credentialImposter.GetSchema().Returns(new Schema { Block = new Schema.Types.Block() });
+
+        // Act
+        var response = await _sut.GetSchema(new GetProviderSchema.Types.Request(), null!);
+
+        // Assert
+        await Assert.That(response.EphemeralResourceSchemas.ContainsKey("secretsafe_credential_data")).IsTrue();
+    }
+
+    [Test]
+    public async Task OpenEphemeralResource_WithRegisteredHandler_ReturnsResponseWithoutRenewalData()
+    {
+        // Arrange
+        var request = new OpenEphemeralResource.Types.Request { TypeName = "secretsafe_credential_data" };
+        var result = new DynamicValue { Msgpack = Google.Protobuf.ByteString.CopyFromUtf8("result-bytes") };
+
+        _ephemeralCredentialImposter.OpenAsync(request).ReturnsAsync(new OpenEphemeralResource.Types.Response { Result = result });
+
+        // Act
+        var response = await _sut.OpenEphemeralResource(request, null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).IsEmpty();
+        await Assert.That(response.Result).IsEqualTo(result);
+        await Assert.That(response.RenewAt).IsNull();
+        await Assert.That(response.HasPrivate).IsFalse();
+    }
+
+    [Test]
+    public async Task OpenEphemeralResource_WhenTypeNameIsNotRegistered_ReturnsDiagnosticWithUnsupportedError()
+    {
+        // Arrange
+        var request = new OpenEphemeralResource.Types.Request { TypeName = "unknown_ephemeral" };
+
+        // Act
+        var response = await _sut.OpenEphemeralResource(request, null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).Count().IsEqualTo(1);
+        await Assert.That(response.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Error);
+        await Assert.That(response.Diagnostics[0].Summary).IsEqualTo("Unsupported ephemeral resource \"unknown_ephemeral\"");
+    }
+
+    [Test]
+    public async Task OpenEphemeralResource_WhenHandlerThrows_ReturnsDiagnosticWithError()
+    {
+        // Arrange
+        const string exceptionMessage = "Secret not found";
+        var request = new OpenEphemeralResource.Types.Request { TypeName = "secretsafe_credential_data" };
+
+        _ephemeralCredentialImposter.OpenAsync(request).Throws(new Exception(exceptionMessage));
+
+        // Act
+        var response = await _sut.OpenEphemeralResource(request, null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).Count().IsEqualTo(1);
+        await Assert.That(response.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Error);
+        await Assert.That(response.Diagnostics[0].Summary).IsEqualTo("Error opening ephemeral resource \"secretsafe_credential_data\"");
+        await Assert.That(response.Diagnostics[0].Detail).IsEqualTo(exceptionMessage);
+    }
+
+    [Test]
+    public async Task ValidateEphemeralResourceConfig_WithUnreadableConfig_ReturnsEmptyResponse()
+    {
+        // Arrange
+        // Terraform sends unknown values here when secret_id depends on another object
+        var request = new ValidateEphemeralResourceConfig.Types.Request
+        {
+            TypeName = "secretsafe_credential_data",
+            Config = new DynamicValue { Msgpack = Google.Protobuf.ByteString.CopyFromUtf8("not-msgpack") }
+        };
+
+        // Act
+        var response = await _sut.ValidateEphemeralResourceConfig(request, null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).IsEmpty();
+    }
+
+    [Test]
+    public async Task RenewEphemeralResource_ReturnsEmptyResponse()
+    {
+        // Act
+        var response = await _sut.RenewEphemeralResource(new RenewEphemeralResource.Types.Request(), null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).IsEmpty();
+        await Assert.That(response.RenewAt).IsNull();
+    }
+
+    [Test]
+    public async Task CloseEphemeralResource_ReturnsEmptyResponse()
+    {
+        // Act
+        var response = await _sut.CloseEphemeralResource(new CloseEphemeralResource.Types.Request(), null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).IsEmpty();
     }
 
     // Pass-through methods
