@@ -39,6 +39,20 @@ public class Terraform5ProviderService(
     public override Task<Configure.Types.Response> Configure(Configure.Types.Request request, ServerCallContext context)
     {
         var cfg = SmartSerializer.Deserialize<ProviderConfiguration>(request.Config);
+
+        var errors = cfg.Validate();
+        if (errors.Count > 0)
+        {
+            var response = new Configure.Types.Response();
+            response.Diagnostics.AddRange(errors.Select(error => new Diagnostic
+            {
+                Severity = Diagnostic.Types.Severity.Error,
+                Summary = "Invalid provider configuration",
+                Detail = error,
+            }));
+            return Task.FromResult(response);
+        }
+
         _configuration.ReplaceValues(cfg);
         return Task.FromResult(new Configure.Types.Response());
     }
@@ -50,7 +64,7 @@ public class Terraform5ProviderService(
         => Task.FromResult(new ValidateResourceTypeConfig.Types.Response());
 
     public override Task<UpgradeResourceState.Types.Response> UpgradeResourceState(UpgradeResourceState.Types.Request request, ServerCallContext context)
-        => Task.FromResult(new UpgradeResourceState.Types.Response());
+        => Task.FromResult(new UpgradeResourceState.Types.Response { UpgradedState = new DynamicValue { Json = request.RawState.Json } });
 
     public override async Task<ReadResource.Types.Response> ReadResource(ReadResource.Types.Request request, ServerCallContext context)
     {
@@ -93,7 +107,9 @@ public class Terraform5ProviderService(
     }
 
     public override Task<PlanResourceChange.Types.Response> PlanResourceChange(PlanResourceChange.Types.Request request, ServerCallContext context)
-        => Task.FromResult(new PlanResourceChange.Types.Response { PlannedState = request.ProposedNewState });
+        => Task.FromResult(_resourceHandlers.TryGetValue(request.TypeName, out var handler)
+            ? ResourcePlanner.Plan(request, handler.GetSchema(), handler.ReplaceAttributes)
+            : new PlanResourceChange.Types.Response { PlannedState = request.ProposedNewState });
 
     public override async Task<ApplyResourceChange.Types.Response> ApplyResourceChange(ApplyResourceChange.Types.Request request, ServerCallContext context)
     {
@@ -116,6 +132,8 @@ public class Terraform5ProviderService(
 
         try
         {
+            request.PlannedState = TerraformObject.ClearUnknown(request.PlannedState);
+
             return await handler.ApplyAsync(request);
         }
         catch (Exception ex)

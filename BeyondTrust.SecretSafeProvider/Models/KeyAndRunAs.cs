@@ -1,6 +1,6 @@
 ﻿namespace BeyondTrust.SecretSafeProvider.Models;
 
-public record KeyAndRunAs(string Key, string RunAs, string? Pwd = null)
+public record KeyAndRunAs(string? Key, string? RunAs, string? Pwd = null)
 {
     public override string ToString()
         => Pwd is null

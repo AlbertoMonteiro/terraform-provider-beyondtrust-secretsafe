@@ -9,6 +9,7 @@ namespace BeyondTrust.SecretSafeProvider.Serialization;
 [JsonSerializable(typeof(KeyAndRunAs))]
 [JsonSerializable(typeof(SecretValue))]
 [JsonSerializable(typeof(SignAppinResponse))]
+[JsonSerializable(typeof(OAuthTokenResponse))]
 [JsonSerializable(typeof(CredentialData))]
 [JsonSerializable(typeof(FileDownloadData))]
 [JsonSerializable(typeof(CreateSecretCredentialRequest))]

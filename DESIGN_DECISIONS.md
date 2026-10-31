@@ -277,6 +277,55 @@ public Task<SecretResponse> CreateFileSecret(
 
 The `[AliasAs]` attribute maps C# parameter names to form field names, allowing structured request bodies alongside file uploads.
 
+## Authentication Modes
+
+The provider accepts either an API key (`key` + `runas`, optionally `pwd`) or OAuth client credentials (`client_id` + `client_secret`). The two modes behave differently against the API:
+
+| | API key | OAuth |
+| --- | --- | --- |
+| Authentication | `SignAppin` opens a cookie session, `Signout` closes it | `Authorization: Bearer` on every request |
+| Default owner | `UserId` returned by `SignAppin` | `_clientUserId` claim of the access token |
+
+### Bearer Token in a DelegatingHandler
+
+`OAuthBearerHandler` is added to the `HttpClient` only in OAuth mode. Adding an `[Authorize("Bearer")]` parameter to each Refit method would touch every endpoint and break API key mode. With the handler, `IBeyondTrustSecretSafe` stays the same and the API key path is unchanged.
+
+The token is requested on first use and kept for the lifetime of the handler. `CreateApi()` runs once per operation, so there is no expiry logic to maintain.
+
+The token request does not go through Refit. Refit's URL-encoded body formatter reflects over object properties, which is risky with `TrimMode=full`. `FormUrlEncodedContent` plus `Json.Default` has no such dependency.
+
+### Owner from the Token Claims
+
+Without `SignAppin` there is no `UserId` response, but the token carries the same ID in the `_clientUserId` claim. The claim is only read when a write has no `owner_id`, and `IBeyondTrustApiFactory.GetOAuthUserId` caches it for the provider process, since the user behind a `client_id` does not change. This costs one extra token request per process.
+
+The factory requests its own token because the one in use lives inside the `HttpClient` pipeline of each operation. The signature is not validated: the token comes straight from the token endpoint and only decides a default that the API authorizes anyway.
+
+### Validation in Configure
+
+Authentication arguments are validated in `Configure`, not in `PrepareProviderConfig`. During validation Terraform can send unknown values, which fail to deserialize into `string`. Combining both modes is an error instead of a silent precedence, so the provider never authenticates with an identity the user did not expect.
+
+## Resource Lifecycle
+
+Plan and apply work on raw msgpack values because they must carry what the typed models cannot represent.
+
+### Unknown Values
+
+`ResourcePlanner` marks computed attributes as unknown when planning. Without that, Terraform plans `id = null` and rejects the real ID after apply with "Provider produced inconsistent result". On update the `id` and an `owner_id` chosen earlier keep their prior value, and a plan without changes is returned as it came, so a clean state produces no diff.
+
+Unknown values are msgpack extensions, which fail to deserialize into `string` or `long?`. `ApplyResourceChange` turns them into null with `TerraformObject.ClearUnknown` before calling the handlers.
+
+### Values Terraform Must Get Back
+
+After apply, every attribute set in the configuration must keep the planned value, or Terraform rejects the result. The handlers therefore return planned values for configured attributes and use the API response only for computed ones. On read, an empty `Description` from the API keeps the null from the state, otherwise an unset description would show a permanent diff.
+
+### Destroy and Replace
+
+Terraform plans a null object when destroying, so handlers must check for it before anything else. File secrets have no update: every configurable attribute is in `FolderFileSecretData.ReplaceAttributes`, and a change replaces the secret.
+
+### Owners in Native AOT
+
+MessagePack builds the formatter of `IList<T>` through reflection, which fails in Native AOT with a `MissingMethodException` even though the same code works in `dotnet run`. `OwnerInfoListFormatter` avoids that and writes the `list(object)` the schema declares. Test collections on the published binary, not only in the test suite.
+
 ## Error Handling
 
 ### SignAppin Failure = Cascading Failures

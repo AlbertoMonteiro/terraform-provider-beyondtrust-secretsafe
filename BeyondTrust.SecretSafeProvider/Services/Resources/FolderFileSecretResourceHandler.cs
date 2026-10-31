@@ -11,6 +11,7 @@ public class FolderFileSecretResourceHandler(
 {
     public const string TYPE_NAME = "secretsafe_folder_file";
     public string TypeName => TYPE_NAME;
+    public IReadOnlySet<string> ReplaceAttributes => FolderFileSecretData.ReplaceAttributes;
 
     public Schema GetSchema() => FolderFileSecretData.GetSchema();
 
@@ -37,9 +38,9 @@ public class FolderFileSecretResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
+            await secretSafe.OpenSession(configuration);
             var secretResponse = await secretSafe.GetSecret(Guid.Parse(resourceData.Id));
-            await secretSafe.Signout();
+            await secretSafe.CloseSession(configuration);
 
             var result = new FolderFileSecretData
             {
@@ -94,61 +95,47 @@ public class FolderFileSecretResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
-            var ownerId = signAppinResponse.UserId;
+            var session = await secretSafe.OpenSession(configuration);
 
-            SecretFileResponse? secretResponse = null;
-
-            // Create if no prior state
-            if (string.IsNullOrEmpty(resourceData?.Id))
+            // Terraform plans a null object when destroying
+            if (plannedState is null)
             {
-                // Decode base64 to bytes for file upload
-                byte[] fileBytes = Convert.FromBase64String(plannedState.FileContentBase64);
+                await secretSafe.DeleteSecretIfExists(resourceData.Id);
+                await secretSafe.CloseSession(configuration);
 
-                var metadata = new CreateSecretFileRequest(
-                    Title: plannedState.Title,
-                    Description: plannedState.Description,
-                    FileName: plannedState.FileName,
-                    FileContent: plannedState.FileContentBase64,
-                    OwnerId: ownerId,
-                    Owners: null);
-
-                using var stream = new MemoryStream(fileBytes);
-                var filePart = new StreamPart(stream, plannedState.FileName, "application/octet-stream");
-
-                secretResponse = await secretSafe.CreateFileSecret(plannedState.FolderId, metadata, filePart);
-            }
-            else
-            {
-                // For file updates, would need to implement similar logic
-                // For now, just re-create with the same ID
-                byte[] fileBytes = Convert.FromBase64String(plannedState.FileContentBase64);
-
-                var metadata = new CreateSecretFileRequest(
-                    Title: plannedState.Title,
-                    Description: plannedState.Description,
-                    FileName: plannedState.FileName,
-                    FileContent: plannedState.FileContentBase64,
-                    OwnerId: ownerId,
-                    Owners: null);
-
-                using var stream = new MemoryStream(fileBytes);
-                var filePart = new StreamPart(stream, plannedState.FileName, "application/octet-stream");
-
-                secretResponse = await secretSafe.CreateFileSecret(plannedState.FolderId, metadata, filePart);
+                return new ApplyResourceChange.Types.Response { NewState = request.PlannedState };
             }
 
-            await secretSafe.Signout();
+            var ownerId = await apiFactory.ResolveOwnerId(session, plannedState.OwnerId);
+
+            // Decode base64 to bytes for file upload
+            byte[] fileBytes = Convert.FromBase64String(plannedState.FileContentBase64);
+
+            var metadata = new CreateSecretFileRequest(
+                Title: plannedState.Title,
+                Description: plannedState.Description,
+                FileName: plannedState.FileName,
+                FileContent: plannedState.FileContentBase64,
+                OwnerId: ownerId,
+                Owners: null,
+                FolderId: plannedState.FolderId);
+
+            using var stream = new MemoryStream(fileBytes);
+            var filePart = new StreamPart(stream, plannedState.FileName, "application/octet-stream");
+
+            var secretResponse = await secretSafe.CreateFileSecret(plannedState.FolderId, metadata, filePart);
+
+            await secretSafe.CloseSession(configuration);
 
             var result = new FolderFileSecretData
             {
                 Id = secretResponse.Id,
-                FolderId = secretResponse.FolderId ?? plannedState.FolderId,
-                Title = secretResponse.Title ?? plannedState.Title,
-                Description = secretResponse.Description ?? plannedState.Description,
-                FileName = secretResponse.FileName ?? plannedState.FileName,
+                FolderId = plannedState.FolderId,
+                Title = plannedState.Title,
+                Description = plannedState.Description,
+                FileName = plannedState.FileName,
                 FileContentBase64 = plannedState.FileContentBase64,
-                OwnerId = secretResponse.OwnerId,
+                OwnerId = plannedState.OwnerId ?? secretResponse.OwnerId,
                 Owners = secretResponse.Owners,
                 FileHash = secretResponse.FileHash,
                 CreatedOn = secretResponse.CreatedOn,

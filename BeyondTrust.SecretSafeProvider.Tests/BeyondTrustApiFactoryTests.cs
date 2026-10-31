@@ -45,6 +45,25 @@ public class BeyondTrustApiFactoryTests
     }
 
     [Test]
+    public async Task CreateApi_WithOAuthCredentials_ReturnsNonNullInstance()
+    {
+        // Arrange
+        var providerConfig = new ProviderConfiguration
+        {
+            BaseUrl = "https://provider.example.com",
+            ClientId = "id",
+            ClientSecret = "secret"
+        };
+        var sut = new BeyondTrustApiFactory(providerConfig, EmptyConfiguration());
+
+        // Act
+        var api = sut.CreateApi();
+
+        // Assert
+        await Assert.That(api).IsNotNull();
+    }
+
+    [Test]
     public async Task CreateApi_WhenCalledMultipleTimes_ReturnsDistinctInstances()
     {
         // Arrange

@@ -7,8 +7,8 @@ terraform {
 }
 
 provider "secretsafe" {
-  key     = ""
-  runas   = ""
+  key     = "local"
+  runas   = "local"
   baseUrl = "http://localhost:32772"
 }
 

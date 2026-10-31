@@ -52,7 +52,7 @@ public class Terraform5ProviderServiceTests
         await Assert.That(response.DataSourceSchemas.ContainsKey(_credentialDataSourceHandler.TypeName)).IsTrue();
         await Assert.That(response.DataSourceSchemas[_credentialDataSourceHandler.TypeName]).IsNotNull();
         await Assert.That(response.Provider).IsNotNull();
-        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(4);
+        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(6);
     }
 
     [Test]
@@ -78,6 +78,77 @@ public class Terraform5ProviderServiceTests
         await Assert.That(_configuration.Key).IsEqualTo(newConfig.Key);
         await Assert.That(_configuration.RunAs).IsEqualTo(newConfig.RunAs);
         await Assert.That(_configuration.BaseUrl).IsEqualTo(newConfig.BaseUrl);
+    }
+
+    [Test]
+    public async Task UpgradeResourceState_ReturnsRawStateUnchanged()
+    {
+        // Arrange
+        var rawState = """{ "id": "secret-id" }"""u8.ToArray();
+        var request = new UpgradeResourceState.Types.Request
+        {
+            RawState = new RawState { Json = Google.Protobuf.ByteString.CopyFrom(rawState) }
+        };
+
+        // Act
+        var response = await _sut.UpgradeResourceState(request, null!);
+
+        // Assert
+        await Assert.That(response.UpgradedState.Json.ToByteArray()).IsEquivalentTo(rawState);
+    }
+
+    [Test]
+    public async Task Configure_WithOAuthCredentials_UpdatesSharedConfiguration()
+    {
+        // Arrange
+        var newConfig = new ProviderConfiguration
+        {
+            ClientId = "client-id",
+            ClientSecret = "client-secret",
+            BaseUrl = "https://beyondtrust.example.com"
+        };
+
+        var request = new Configure.Types.Request
+        {
+            Config = SmartSerializer.Serialize(newConfig)
+        };
+
+        // Act
+        var response = await _sut.Configure(request, null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).IsEmpty();
+        await Assert.That(_configuration.ClientId).IsEqualTo(newConfig.ClientId);
+        await Assert.That(_configuration.ClientSecret).IsEqualTo(newConfig.ClientSecret);
+        await Assert.That(_configuration.UsesOAuth).IsTrue();
+    }
+
+    [Test]
+    public async Task Configure_WithInvalidConfiguration_ReturnsDiagnosticAndKeepsPreviousValues()
+    {
+        // Arrange
+        var newConfig = new ProviderConfiguration
+        {
+            Key = "my-api-key",
+            RunAs = "svc-account",
+            ClientId = "client-id",
+            ClientSecret = "client-secret",
+            BaseUrl = "https://beyondtrust.example.com"
+        };
+
+        var request = new Configure.Types.Request
+        {
+            Config = SmartSerializer.Serialize(newConfig)
+        };
+
+        // Act
+        var response = await _sut.Configure(request, null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).Count().IsEqualTo(2);
+        await Assert.That(response.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Error);
+        await Assert.That(_configuration.ClientId).IsNull();
+        await Assert.That(_configuration.BaseUrl).IsEqualTo("");
     }
 
     [Test]
@@ -216,16 +287,6 @@ public class Terraform5ProviderServiceTests
         // Assert
         await Assert.That(result).IsNotNull();
         await Assert.That(result.Diagnostics).IsEmpty();
-    }
-
-    [Test]
-    public async Task UpgradeResourceState_ReturnsEmptyResponse()
-    {
-        // Act
-        var result = await _sut.UpgradeResourceState(new UpgradeResourceState.Types.Request(), null!);
-
-        // Assert
-        await Assert.That(result).IsNotNull();
     }
 
     [Test]

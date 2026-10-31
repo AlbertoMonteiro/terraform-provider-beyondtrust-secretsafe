@@ -20,11 +20,15 @@ public class IntegrationTests(AspireSetup aspire)
 
         // Assert — provider schema
         await Assert.That(response.Provider).IsNotNull();
-        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(4);
+        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(6);
         await Assert.That(response.Provider.Block.Attributes.Select(a => a.Name))
             .Contains("key")
             .And.Contains("runas")
-            .And.Contains("baseUrl");
+            .And.Contains("baseUrl")
+            .And.Contains("client_id")
+            .And.Contains("client_secret");
+        await Assert.That(response.Provider.Block.Attributes.Single(a => a.Name == "client_secret").Sensitive).IsTrue();
+        await Assert.That(response.Provider.Block.Attributes.Single(a => a.Name == "key").Required).IsFalse();
 
         // Assert — credential data source schema
         await Assert.That(response.DataSourceSchemas.ContainsKey(CredentialDataSourceHandler.TYPE_NAME)).IsTrue();

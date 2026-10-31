@@ -10,6 +10,7 @@ public class FolderCredentialResourceHandler(
 {
     public const string TYPE_NAME = "secretsafe_folder_credential";
     public string TypeName => TYPE_NAME;
+    public IReadOnlySet<string> ReplaceAttributes => FolderCredentialData.ReplaceAttributes;
 
     public Schema GetSchema() => FolderCredentialData.GetSchema();
 
@@ -36,9 +37,9 @@ public class FolderCredentialResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
+            await secretSafe.OpenSession(configuration);
             var secretResponse = await secretSafe.GetSecret(Guid.Parse(resourceData.Id));
-            await secretSafe.Signout();
+            await secretSafe.CloseSession(configuration);
 
             var result = new FolderCredentialData
             {
@@ -48,7 +49,7 @@ public class FolderCredentialResourceHandler(
                 Username = secretResponse.Username ?? string.Empty,
                 Password = secretResponse.Password ?? string.Empty,
                 OwnerId = secretResponse.OwnerId,
-                Description = secretResponse.Description,
+                Description = string.IsNullOrEmpty(secretResponse.Description) ? resourceData.Description : secretResponse.Description,
                 Owners = secretResponse.Owners,
                 CreatedOn = secretResponse.CreatedOn,
                 CreatedBy = secretResponse.CreatedBy,
@@ -92,8 +93,18 @@ public class FolderCredentialResourceHandler(
 
             var secretSafe = apiFactory.CreateApi();
 
-            var signAppinResponse = await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
-            var ownerId = signAppinResponse.UserId;
+            var session = await secretSafe.OpenSession(configuration);
+
+            // Terraform plans a null object when destroying
+            if (plannedState is null)
+            {
+                await secretSafe.DeleteSecretIfExists(resourceData.Id);
+                await secretSafe.CloseSession(configuration);
+
+                return new ApplyResourceChange.Types.Response { NewState = request.PlannedState };
+            }
+
+            var ownerId = await apiFactory.ResolveOwnerId(session, plannedState.OwnerId);
 
             SecretResponse? secretResponse = null;
 
@@ -119,22 +130,39 @@ public class FolderCredentialResourceHandler(
                     Username: plannedState.Username,
                     Password: plannedState.Password,
                     OwnerId: ownerId,
-                    Owners: null);
+                    Owners: null,
+                    FolderId: plannedState.FolderId);
 
-                secretResponse = await secretSafe.UpdateCredentialSecret(resourceData.Id, request_body);
+                // The API answers 204, so the computed values must be read back
+                await secretSafe.UpdateCredentialSecret(resourceData.Id, request_body);
+                var updated = await secretSafe.GetSecret(Guid.Parse(resourceData.Id));
+
+                secretResponse = new SecretResponse(
+                    Id: resourceData.Id,
+                    OwnerId: updated.OwnerId,
+                    CreatedOn: updated.CreatedOn,
+                    CreatedBy: updated.CreatedBy,
+                    ModifiedOn: updated.ModifiedOn,
+                    ModifiedBy: updated.ModifiedBy,
+                    Owner: updated.Owner,
+                    Folder: updated.Folder,
+                    FolderPath: updated.FolderPath,
+                    Owners: updated.Owners,
+                    OwnerType: updated.OwnerType,
+                    Notes: updated.Notes);
             }
 
-            await secretSafe.Signout();
+            await secretSafe.CloseSession(configuration);
 
             var result = new FolderCredentialData
             {
                 Id = secretResponse.Id,
-                FolderId = secretResponse.FolderId ?? plannedState.FolderId,
-                Title = secretResponse.Title ?? plannedState.Title,
-                Description = secretResponse.Description ?? plannedState.Description,
-                Username = secretResponse.Username ?? plannedState.Username,
+                FolderId = plannedState.FolderId,
+                Title = plannedState.Title,
+                Description = plannedState.Description,
+                Username = plannedState.Username,
                 Password = plannedState.Password,
-                OwnerId = secretResponse.OwnerId,
+                OwnerId = plannedState.OwnerId ?? secretResponse.OwnerId,
                 Owners = secretResponse.Owners,
                 CreatedOn = secretResponse.CreatedOn,
                 CreatedBy = secretResponse.CreatedBy,

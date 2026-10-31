@@ -30,7 +30,7 @@ output "credential_username" {
 
 ## Arguments
 
-- `folder_id` - (Required, String) The ID of the folder where the credential will be stored.
+- `folder_id` - (Required, String) The ID of the folder where the credential will be stored. Changing it replaces the credential.
 - `title` - (Required, String) A descriptive name for the credential (e.g., "Production DB Admin").
 - `description` - (Optional, String) Additional details about what this credential is used for.
 - `username` - (Required, String) The username for the credential.
@@ -46,7 +46,7 @@ output "credential_username" {
 - `description` - (String) The secret description
 - `username` - (String) The username
 - `password` - (String, Sensitive) The password
-- `owner_id` - (Number, Computed) ID of the secret owner (auto-populated from authenticated user)
+- `owner_id` - (Number) ID of the secret owner
 - `created_on` - (String, Computed) Timestamp when the credential was created (RFC3339 format)
 - `created_by` - (String, Computed) User who created the credential
 - `modified_on` - (String, Computed) Timestamp when the credential was last modified (RFC3339 format)
@@ -75,5 +75,5 @@ resource "secretsafe_folder_credential" "shared_credential" {
 ## Notes
 
 - Passwords should be managed carefully. Consider using Terraform variables and `.tfvars` files to keep sensitive data out of version control.
-- The `owner_id` field is required and must correspond to a valid user ID in BeyondTrust Secret Safe.
+- The `owner_id` field must correspond to a valid user ID in BeyondTrust Secret Safe.
 - Credential titles must be unique within their parent folder.

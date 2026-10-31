@@ -20,7 +20,10 @@ public interface IBeyondTrustSecretSafe
     public Task<SecretResponse> CreateCredentialSecret(string folderId, [Body] CreateSecretCredentialRequest request);
 
     [Put($"{V3}/Secrets-Safe/Secrets/{{secretId}}")]
-    public Task<SecretResponse> UpdateCredentialSecret(string secretId, [Body] CreateSecretCredentialRequest request);
+    public Task UpdateCredentialSecret(string secretId, [Body] CreateSecretCredentialRequest request);
+
+    [Delete($"{V3}/Secrets-Safe/Secrets/{{secretId}}")]
+    public Task<HttpResponseMessage> DeleteSecret(string secretId);
 
     [Multipart]
     [Post($"{V3}/Secrets-Safe/Folders/{{folderId}}/secrets/file")]
@@ -30,13 +33,13 @@ public interface IBeyondTrustSecretSafe
         [AliasAs("File")] StreamPart file);
 
     [Post($"{V3}/Secrets-Safe/Folders/")]
-    public Task<FolderResponse> CreateFolder([Body(BodySerializationMethod.UrlEncoded)] FolderRequest request);
+    public Task<FolderResponse> CreateFolder([Body] FolderRequest request);
 
     [Get($"{V3}/Secrets-Safe/Folders/{{id}}")]
     public Task<FolderResponse> GetFolder(string id);
 
     [Put($"{V3}/Secrets-Safe/Folders/{{id}}")]
-    public Task<FolderResponse> UpdateFolder(string id, [Body(BodySerializationMethod.UrlEncoded)] FolderRequest request);
+    public Task<FolderResponse> UpdateFolder(string id, [Body] FolderRequest request);
 
     [Delete($"{V3}/Secrets-Safe/Folders/{{id}}")]
     public Task<HttpResponseMessage> DeleteFolder(string id);

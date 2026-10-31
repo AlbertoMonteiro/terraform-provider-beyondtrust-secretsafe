@@ -19,11 +19,29 @@ The BeyondTrust Secret Safe provider allows you to manage and retrieve secrets f
 
 ## Provider Configuration
 
-The provider requires the following arguments:
+The provider supports two authentication modes. Use one or the other: combining them is an error.
 
-- `runas` - (Required, String) User to authenticate in BeyondTrust Secret Safe
-- `key` - (Required, String, Sensitive) The API key of BeyondTrust Secret Safe
 - `baseUrl` - (Required, String) Base URL of BeyondTrust Secret Safe instance
+
+**OAuth client credentials:**
+
+- `client_id` - (Optional, String, Sensitive) OAuth client ID of the API registration
+- `client_secret` - (Optional, String, Sensitive) OAuth client secret of the API registration
+
+```hcl
+provider "secretsafe" {
+  client_id     = var.secret_safe_client_id
+  client_secret = var.secret_safe_client_secret
+  baseUrl       = "https://secretsafe.example.com"
+}
+```
+
+With OAuth, `owner_id` defaults to the user behind the OAuth client, read from the `_clientUserId` claim of the token.
+
+**API key:**
+
+- `runas` - (Optional, String) User to authenticate in BeyondTrust Secret Safe. Required with `key`
+- `key` - (Optional, String, Sensitive) The API key of BeyondTrust Secret Safe. Required when `client_id` and `client_secret` are not set
 - `pwd` - (Optional, String, Sensitive) Domain password for authentication (if using domain credentials)
 
 ## Example Usage

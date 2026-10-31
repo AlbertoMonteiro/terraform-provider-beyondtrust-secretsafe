@@ -21,9 +21,9 @@ public class FileDownloadDataSourceHandler(
 
         try
         {
-            await secretSafe.SignAppin(new KeyAndRunAs(configuration.Key, configuration.RunAs, configuration.Pwd));
+            await secretSafe.OpenSession(configuration);
             var response = await secretSafe.DownloadSecret(Guid.Parse(input.SecretId));
-            await secretSafe.Signout();
+            await secretSafe.CloseSession(configuration);
 
             var contentBytes = await response.Content.ReadAsByteArrayAsync();
             var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? string.Empty;

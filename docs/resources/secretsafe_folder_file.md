@@ -42,7 +42,7 @@ output "file_secret_id" {
 - `description` - (String) The secret description
 - `file_name` - (String) The file name
 - `file_content_base64` - (String, Sensitive) The file content as base64
-- `owner_id` - (Number, Computed) ID of the secret owner (auto-populated from authenticated user)
+- `owner_id` - (Number) ID of the secret owner
 - `file_hash` - (String, Computed) SHA-256 hash of the file content
 - `created_on` - (String, Computed) Timestamp when the file secret was created (RFC3339 format)
 - `created_by` - (String, Computed) User who created the file secret
@@ -52,6 +52,10 @@ output "file_secret_id" {
 - `folder_path` - (String, Computed) Full path to the parent folder
 - `owner_type` - (String, Computed) Type of owner (e.g., "User", "Group")
 - `notes` - (String, Computed) Additional notes about the file secret
+
+## Updates
+
+File secrets are not updated in place: changing any argument replaces the secret, which gives it a new `id`.
 
 ## Sensitive Attributes
 
