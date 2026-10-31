@@ -32,6 +32,31 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 RUN apk add --no-cache clang gcc build-base zlib-dev musl-dev
 ```
 
+### Local Testing on Windows
+
+To test the provider with the real Terraform CLI on Windows, publish the AOT binary and point Terraform at it. This needs no Docker: the Visual Studio C++ tools do the native link.
+
+```powershell
+# The AOT link step calls vswhere.exe, which is not on the PATH by default
+$env:PATH = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer;$env:PATH"
+
+# Publishes win-x86 to dist/. It deletes dist/ first, so do not run it while Terraform is using the binary
+./publish-dev.ps1
+
+cd terraform
+$env:TF_CLI_CONFIG_FILE = "$PWD\dev.tfrc"
+terraform plan
+```
+
+- `terraform/dev.tfrc` holds the `dev_overrides` entry for `albertomonteiro/beyondtrust-secretsafe`. The key must match the `source` in `required_providers` exactly.
+- Do not run `terraform init` to test local changes. With no matching override, it downloads the published provider from the registry, and Terraform then rejects anything newer, such as a new argument, as unsupported.
+- If a new provider argument is rejected, check which binary is in use: the "development overrides" warning must list `..\dist`.
+- `terraform/` is in a public repository. Pass credentials with `TF_VAR_*` variables, not in `main.tf`. State files hold secrets in plain text and are ignored by `terraform/.gitignore`.
+
+The test suite does not run under Native AOT, so anything touching serialization must also be exercised on the published binary. Failures such as MessagePack generic formatters only appear there.
+
+The local Docker daemon is Rancher Desktop, which the integration tests and the Alpine build need. Start it with `rdctl start` (`C:\Program Files\Rancher Desktop\resources\resources\win32\bin\rdctl.exe`).
+
 ## Architecture
 
 ### Terraform Plugin Protocol v5.2 Handshake

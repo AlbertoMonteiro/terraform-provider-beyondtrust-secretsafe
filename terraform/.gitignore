@@ -1,0 +1,7 @@
+# State and plans hold secrets in plain text
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+.terraform/
+.terraform.lock.hcl
