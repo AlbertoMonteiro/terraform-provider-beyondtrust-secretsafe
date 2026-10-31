@@ -2,6 +2,8 @@
 
 Retrieve username and password credentials from BeyondTrust Secret Safe.
 
+~> **Warning:** Terraform stores the password in the state in plain text. With Terraform 1.10 or later, prefer the [`secretsafe_credential_data` ephemeral resource](../ephemeral-resources/secretsafe_credential_data.md) wherever the value can be ephemeral.
+
 ## Example
 
 ```hcl

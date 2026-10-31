@@ -92,6 +92,7 @@ public class FileDownloadDataSourceHandlerTests
 
         // Assert
         await Assert.That(result.Diagnostics).Count().IsEqualTo(1);
+        await Assert.That(result.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Error);
         await Assert.That(result.Diagnostics[0].Summary).IsEqualTo("Error");
         await Assert.That(result.Diagnostics[0].Detail).IsEqualTo(exceptionMessage);
     }
@@ -114,6 +115,7 @@ public class FileDownloadDataSourceHandlerTests
 
         // Assert
         await Assert.That(result.Diagnostics).Count().IsEqualTo(1);
+        await Assert.That(result.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Error);
         await Assert.That(result.Diagnostics[0].Summary).IsEqualTo("Error");
         await Assert.That(result.Diagnostics[0].Detail).IsEqualTo(exceptionMessage);
     }
@@ -142,6 +144,7 @@ public class FileDownloadDataSourceHandlerTests
 
         // Assert
         await Assert.That(result.Diagnostics).Count().IsEqualTo(1);
+        await Assert.That(result.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Error);
         await Assert.That(result.Diagnostics[0].Summary).IsEqualTo("Error");
         await Assert.That(result.Diagnostics[0].Detail).IsEqualTo(exceptionMessage);
     }

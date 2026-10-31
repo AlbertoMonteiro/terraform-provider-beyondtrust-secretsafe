@@ -2,7 +2,7 @@
 
 This document captures key architectural decisions and lessons learned during the development of the BeyondTrust Secret Safe Terraform provider.
 
-## Terraform Plugin Protocol v5.2 Handshake
+## Terraform Plugin Protocol v5.10 Handshake
 
 ### The Handshake Line
 
@@ -14,7 +14,7 @@ When Terraform spawns the provider binary, it expects a single line on stdout be
 
 Fields (pipe-delimited):
 - `core_protocol_version` = `1`
-- `plugin_protocol_version` = `5` (TPPv5.2)
+- `plugin_protocol_version` = `5` (TPPv5.10)
 - `network` = `tcp`
 - `address` = `{host}:{port}` where the gRPC server is listening
 - `protocol` = `grpc`
@@ -325,6 +325,33 @@ Terraform plans a null object when destroying, so handlers must check for it bef
 ### Owners in Native AOT
 
 MessagePack builds the formatter of `IList<T>` through reflection, which fails in Native AOT with a `MissingMethodException` even though the same code works in `dotnet run`. `OwnerInfoListFormatter` avoids that and writes the `list(object)` the schema declares. Test collections on the published binary, not only in the test suite.
+
+## Ephemeral Resources
+
+Data sources store what they read in the state, in plain text. Ephemeral resources (Terraform 1.10+) hand the value over during the run and keep it out of the state and the plan.
+
+### Protocol 5 Is Enough
+
+Ephemeral resources do not need protocol 6. They need a newer minor version of protocol 5, so `tfplugin5.2.proto` became `tfplugin5.10.proto`, taken from a Terraform release tag. The handshake carries only the major version and stays `1|5|...`. Terraform learns about ephemeral resources from `ephemeral_resource_schemas` in the `GetSchema` response.
+
+RPCs the provider does not use stay `Unimplemented`, inherited from `ProviderBase`.
+
+### Same Names and Schemas as the Data Sources
+
+`secretsafe_credential_data` and `secretsafe_download_file_data` exist both as data sources and as ephemeral resources. The two namespaces are separate, so migrating means changing `data` to `ephemeral`. Both kinds share the read logic in `BeyondTrustSessionExtensions` and the models, which already work under Native AOT.
+
+The data sources stay. Ephemeral values are only accepted in some places, such as write-only arguments and `provider` blocks, so they do not replace every use.
+
+### Open, Renew and Close
+
+- **Open** does all the work. The API key session opens and closes inside it.
+- **Renew** is never called: secrets are static values with no lease, so open returns no `renew_at`.
+- **Close** has nothing to release, but it must exist because Terraform calls it.
+- **Validate** does not deserialize the configuration. `secret_id` can be unknown there, and Terraform only calls open once the configuration is fully known.
+
+### Not Covered: Write-Only Arguments
+
+`secretsafe_folder_credential` and `secretsafe_folder_file` still store the secret they write in the state. Avoiding that needs write-only arguments (Terraform 1.11+), which can be added later without a breaking change.
 
 ## Error Handling
 

@@ -2,6 +2,8 @@
 
 Download file content from BeyondTrust Secret Safe as base64-encoded data.
 
+~> **Warning:** Terraform stores the file content in the state in plain text. With Terraform 1.10 or later, prefer the [`secretsafe_download_file_data` ephemeral resource](../ephemeral-resources/secretsafe_download_file_data.md) wherever the value can be ephemeral.
+
 ## Example
 
 ```hcl

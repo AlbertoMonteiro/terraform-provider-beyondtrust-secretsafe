@@ -163,6 +163,76 @@ public class IntegrationTests(AspireSetup aspire)
     }
 
     [Test]
+    public async Task GetSchema_ReturnsEphemeralResourceSchemas()
+    {
+        // Act
+        var response = await _client.GetSchemaAsync(new GetProviderSchema.Types.Request());
+
+        // Assert
+        await Assert.That(response.EphemeralResourceSchemas.ContainsKey(CredentialDataSourceHandler.TYPE_NAME)).IsTrue();
+        await Assert.That(response.EphemeralResourceSchemas.ContainsKey(FileDownloadDataSourceHandler.TYPE_NAME)).IsTrue();
+
+        var password = response.EphemeralResourceSchemas[CredentialDataSourceHandler.TYPE_NAME].Block.Attributes.Single(a => a.Name == "password");
+        await Assert.That(password.Computed).IsTrue();
+        await Assert.That(password.Sensitive).IsTrue();
+    }
+
+    [Test]
+    public async Task OpenEphemeralResource_WithCredentialRequest_ReturnsSecretFromProvider()
+    {
+        // Arrange
+        CredentialData credential = new() { SecretId = Guid.NewGuid().ToString() };
+
+        OpenEphemeralResource.Types.Request request = new()
+        {
+            TypeName = CredentialDataSourceHandler.TYPE_NAME,
+            Config = new()
+            {
+                Msgpack = ByteString.CopyFrom(MessagePackSerializer.Serialize(credential)),
+            }
+        };
+
+        // Act
+        var resp = await _client.OpenEphemeralResourceAsync(request);
+
+        // Assert
+        await Assert.That(resp.Diagnostics).IsEmpty();
+        await Assert.That(resp.RenewAt).IsNull();
+
+        var responseData = MessagePackSerializer.Deserialize<CredentialData>(resp.Result.Msgpack.Memory);
+        await Assert.That(responseData.Username).IsEqualTo("service-account");
+        await Assert.That(responseData.Password).IsEqualTo("SuperSecret123!");
+        await Assert.That(responseData.SecretId).IsEqualTo(credential.SecretId);
+    }
+
+    [Test]
+    public async Task OpenEphemeralResource_WithFileDownloadRequest_ReturnsFileFromProvider()
+    {
+        // Arrange
+        FileDownloadData fileDownload = new() { SecretId = Guid.NewGuid().ToString() };
+
+        OpenEphemeralResource.Types.Request request = new()
+        {
+            TypeName = FileDownloadDataSourceHandler.TYPE_NAME,
+            Config = new()
+            {
+                Msgpack = ByteString.CopyFrom(MessagePackSerializer.Serialize(fileDownload)),
+            }
+        };
+
+        // Act
+        var resp = await _client.OpenEphemeralResourceAsync(request);
+
+        // Assert
+        await Assert.That(resp.Diagnostics).IsEmpty();
+
+        var responseData = MessagePackSerializer.Deserialize<FileDownloadData>(resp.Result.Msgpack.Memory);
+        var expectedContent = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("secret-file-content-from-wiremock"));
+        await Assert.That(responseData.FileContentBase64).IsEqualTo(expectedContent);
+        await Assert.That(responseData.FileName).IsEqualTo("secret.txt");
+    }
+
+    [Test]
     public async Task ReadDataSourceUsingJson_WithFileDownloadRequest_ReturnsFileFromProvider()
     {
         // Arrange

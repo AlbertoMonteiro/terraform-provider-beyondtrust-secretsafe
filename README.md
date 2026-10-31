@@ -5,8 +5,9 @@ A Terraform provider for [BeyondTrust Secret Safe](https://www.beyondtrust.com/s
 ## Features
 
 - 🔐 **Retrieve & Manage Secrets** - Query credentials and file secrets from BeyondTrust Secret Safe
+- 🕶️ **Ephemeral Resources** - Read secrets without storing them in the Terraform state or plan
 - 📦 **Native AOT Compiled** - Minimal binary size (~15 MB) with no runtime dependencies
-- 🔄 **Full TPPv5.2 Support** - Implements Terraform Plugin Protocol v5.2 over gRPC
+- 🔄 **TPPv5.10 Support** - Implements Terraform Plugin Protocol v5.10 over gRPC
 - 🛡️ **mTLS Security** - Self-signed certificates for encrypted provider-Terraform communication
 - 📁 **Folder Management** - Create, read, and manage folders in Secret Safe
 - ⚡ **Fast & Lightweight** - Optimized for performance and quick startup
@@ -20,7 +21,7 @@ terraform {
   required_providers {
     secretsafe = {
       source  = "albertomonteiro/beyondtrust-secretsafe"
-      version = "~> 0.0"
+      version = "~> 1.0"
     }
   }
 }
@@ -47,6 +48,9 @@ Complete documentation is available in the `/docs` directory:
 - **Data Sources:**
   - [`secretsafe_credential_data`](./docs/data-sources/secretsafe_credential_data.md) - Retrieve credentials
   - [`secretsafe_download_file_data`](./docs/data-sources/secretsafe_download_file_data.md) - Download file secrets
+- **Ephemeral Resources:**
+  - [`secretsafe_credential_data`](./docs/ephemeral-resources/secretsafe_credential_data.md) - Retrieve credentials outside the state
+  - [`secretsafe_download_file_data`](./docs/ephemeral-resources/secretsafe_download_file_data.md) - Download file secrets outside the state
 - **Resources:**
   - [`secretsafe_folder`](./docs/resources/secretsafe_folder.md) - Manage folders
   - [`secretsafe_folder_credential`](./docs/resources/secretsafe_folder_credential.md) - Manage credentials
@@ -54,7 +58,7 @@ Complete documentation is available in the `/docs` directory:
 
 ## Requirements
 
-- **Terraform** >= 0.12
+- **Terraform** >= 0.12 (>= 1.10 for ephemeral resources)
 - **BeyondTrust Secret Safe** instance with API access
 - **Linux x64** — the released `linux_amd64` binary is fully static (musl + statically-linked OpenSSL) and runs on any glibc or musl distro, including `FROM scratch` and distroless images, with no extra setup.
 
@@ -106,9 +110,10 @@ The static linking is configured via project properties (`PublishAot`, `StaticEx
 ├── BeyondTrust.SecretSafeProvider/           # Main provider implementation
 │   ├── Program.cs                            # gRPC server setup & handshake
 │   ├── Services/
-│   │   ├── Terraform5ProviderService.cs      # TPPv5.2 RPC implementations
+│   │   ├── Terraform5ProviderService.cs      # TPPv5.10 RPC implementations
 │   │   ├── IBeyondTrustSecretSafe.cs         # Refit API client interface
 │   │   ├── DataSources/                      # Data source handlers
+│   │   ├── EphemeralResources/               # Ephemeral resource handlers
 │   │   └── Resources/                        # Resource handlers
 │   ├── Models/                               # Domain models & configuration
 │   └── Protos/                               # gRPC proto definitions
@@ -128,7 +133,7 @@ The static linking is configured via project properties (`PublishAot`, `StaticEx
 2. Provider writes handshake line to stdout: `1|5|tcp|{host}:{port}|grpc|{cert_base64}`
 3. Provider starts gRPC server with mTLS (self-signed certificates)
 4. Terraform connects via gRPC and presents its own client certificate
-5. Provider implements all TPPv5.2 RPCs: `GetSchema`, `Configure`, `ReadDataSource`, `ApplyResourceChange`, etc.
+5. Provider implements all TPPv5.10 RPCs: `GetSchema`, `Configure`, `ReadDataSource`, `ApplyResourceChange`, etc.
 
 **Authentication Flow:**
 
@@ -154,7 +159,7 @@ WireMock mappings are located in `BeyondTrust.SecretSafeProvider.AppHost/__admin
 
 For a deeper understanding of design decisions, lessons learned, and architectural trade-offs, see [DESIGN_DECISIONS.md](./DESIGN_DECISIONS.md). This includes insights on:
 
-- Terraform Plugin Protocol v5.2 handshake and base64 encoding without padding
+- Terraform Plugin Protocol v5.10 handshake and base64 encoding without padding
 - Native AOT constraints and reflection-free code requirements
 - mTLS with self-signed certificates
 - Service configuration patterns and dependency injection

@@ -1,12 +1,19 @@
 # BeyondTrust Secret Safe Provider
 
-Terraform provider for **BeyondTrust Secret Safe** using **.NET Native AOT**, **Slim Builder**, and **Terraform Plugin Protocol v5.2**.
+Terraform provider for **BeyondTrust Secret Safe** using **.NET Native AOT**, **Slim Builder**, and **Terraform Plugin Protocol v5.10**.
 
 ## Overview
 
 The BeyondTrust Secret Safe provider allows you to manage and retrieve secrets from BeyondTrust Secret Safe in your Terraform configurations.
 
 ## Supported Data Sources
+
+- `secretsafe_credential_data` — Retrieve username/password credentials from a secret
+- `secretsafe_download_file_data` — Download file content from a secret as base64
+
+## Supported Ephemeral Resources
+
+Same reads as the data sources, but the value stays out of the state and plan. Requires Terraform 1.10 or later.
 
 - `secretsafe_credential_data` — Retrieve username/password credentials from a secret
 - `secretsafe_download_file_data` — Download file content from a secret as base64
@@ -74,6 +81,11 @@ output "username" {
 output "password" {
   value     = data.secretsafe_credential_data.example.password
   sensitive = true
+}
+
+# Retrieve credential data without storing it in the state
+ephemeral "secretsafe_credential_data" "example" {
+  secret_id = "12345678-1234-1234-1234-123456789abc"
 }
 
 # Download file content
