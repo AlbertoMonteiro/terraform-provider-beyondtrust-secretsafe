@@ -61,7 +61,17 @@ public class Terraform5ProviderService(
         }
 
         _configuration.ReplaceValues(cfg);
-        return Task.FromResult(new Configure.Types.Response());
+
+        var success = new Configure.Types.Response();
+        if (cfg.SkipsCertificateValidation)
+            success.Diagnostics.Add(new Diagnostic
+            {
+                Severity = Diagnostic.Types.Severity.Warning,
+                Summary = "TLS certificate validation is disabled",
+                Detail = "\"insecure\" is true, so the provider accepts any Secret Safe server certificate. Anyone in the network path can impersonate Secret Safe and read the credentials. Use it only for testing.",
+            });
+
+        return Task.FromResult(success);
     }
 
     public override Task<ValidateDataSourceConfig.Types.Response> ValidateDataSourceConfig(ValidateDataSourceConfig.Types.Request request, ServerCallContext context)

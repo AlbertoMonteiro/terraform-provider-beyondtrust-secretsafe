@@ -30,6 +30,9 @@ The values stay out of the state and plan. Requires Terraform 1.10 or later.
 The provider supports two authentication modes. Use one or the other: combining them is an error.
 
 - `baseUrl` - (Required, String) Base URL of BeyondTrust Secret Safe instance
+- `insecure` - (Optional, Bool) Skips the validation of the Secret Safe TLS certificate. Defaults to `false`. When it is `true`, anyone in the network path can impersonate Secret Safe and read the credentials, so use it only for testing. Terraform shows a warning while it is on
+
+By default the provider validates the server certificate against the CA bundle of the system. On Linux, that is `/etc/ssl/certs`; a certificate signed by an internal CA needs that CA added to the bundle, which is safer than `insecure`.
 
 **OAuth client credentials:**
 

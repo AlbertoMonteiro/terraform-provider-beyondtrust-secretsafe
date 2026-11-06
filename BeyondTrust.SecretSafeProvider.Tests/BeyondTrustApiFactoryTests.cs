@@ -1,4 +1,4 @@
-using BeyondTrust.SecretSafeProvider.Models;
+﻿using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Services;
 using Microsoft.Extensions.Configuration;
 
@@ -61,6 +61,27 @@ public class BeyondTrustApiFactoryTests
 
         // Assert
         await Assert.That(api).IsNotNull();
+    }
+
+    [Test]
+    public async Task CreateHttpHandler_ByDefault_ValidatesServerCertificate()
+    {
+        // Act
+        using var handler = BeyondTrustApiFactory.CreateHttpHandler(skipCertificateValidation: false);
+
+        // Assert
+        await Assert.That(handler.ServerCertificateCustomValidationCallback).IsNull();
+    }
+
+    [Test]
+    public async Task CreateHttpHandler_WithInsecure_AcceptsAnyServerCertificate()
+    {
+        // Act
+        using var handler = BeyondTrustApiFactory.CreateHttpHandler(skipCertificateValidation: true);
+
+        // Assert
+        await Assert.That(handler.ServerCertificateCustomValidationCallback)
+            .IsSameReferenceAs(HttpClientHandler.DangerousAcceptAnyServerCertificateValidator);
     }
 
     [Test]

@@ -1,4 +1,4 @@
-using BeyondTrust.SecretSafeProvider.Models;
+﻿using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Services.DataSources;
 using BeyondTrust.SecretSafeProvider.Services.EphemeralResources;
 using BeyondTrust.SecretSafeProvider.Tests.Proto;
@@ -21,13 +21,14 @@ public class IntegrationTests(AspireSetup aspire)
 
         // Assert — provider schema
         await Assert.That(response.Provider).IsNotNull();
-        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(6);
+        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(7);
         await Assert.That(response.Provider.Block.Attributes.Select(a => a.Name))
             .Contains("key")
             .And.Contains("runas")
             .And.Contains("baseUrl")
             .And.Contains("client_id")
-            .And.Contains("client_secret");
+            .And.Contains("client_secret")
+            .And.Contains("insecure");
         await Assert.That(response.Provider.Block.Attributes.Single(a => a.Name == "client_secret").Sensitive).IsTrue();
         await Assert.That(response.Provider.Block.Attributes.Single(a => a.Name == "key").Required).IsFalse();
 

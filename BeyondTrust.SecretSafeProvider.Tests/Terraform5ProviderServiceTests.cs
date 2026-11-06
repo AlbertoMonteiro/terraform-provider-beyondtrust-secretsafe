@@ -1,4 +1,4 @@
-using BeyondTrust.SecretSafeProvider.Models;
+﻿using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Proto;
 using BeyondTrust.SecretSafeProvider.Serialization;
 using BeyondTrust.SecretSafeProvider.Services;
@@ -59,7 +59,7 @@ public class Terraform5ProviderServiceTests
         await Assert.That(response.DataSourceSchemas.ContainsKey(_credentialDataSourceHandler.TypeName)).IsTrue();
         await Assert.That(response.DataSourceSchemas[_credentialDataSourceHandler.TypeName]).IsNotNull();
         await Assert.That(response.Provider).IsNotNull();
-        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(6);
+        await Assert.That(response.Provider.Block.Attributes).Count().IsEqualTo(7);
     }
 
     [Test]
@@ -128,6 +128,33 @@ public class Terraform5ProviderServiceTests
         await Assert.That(_configuration.ClientId).IsEqualTo(newConfig.ClientId);
         await Assert.That(_configuration.ClientSecret).IsEqualTo(newConfig.ClientSecret);
         await Assert.That(_configuration.UsesOAuth).IsTrue();
+    }
+
+    [Test]
+    public async Task Configure_WithInsecure_ReturnsWarningAndKeepsSetting()
+    {
+        // Arrange
+        var newConfig = new ProviderConfiguration
+        {
+            ClientId = "client-id",
+            ClientSecret = "client-secret",
+            BaseUrl = "https://beyondtrust.example.com",
+            Insecure = true
+        };
+
+        var request = new Configure.Types.Request
+        {
+            Config = SmartSerializer.Serialize(newConfig)
+        };
+
+        // Act
+        var response = await _sut.Configure(request, null!);
+
+        // Assert
+        await Assert.That(response.Diagnostics).Count().IsEqualTo(1);
+        await Assert.That(response.Diagnostics[0].Severity).IsEqualTo(Diagnostic.Types.Severity.Warning);
+        await Assert.That(response.Diagnostics[0].Detail).Contains("insecure");
+        await Assert.That(_configuration.SkipsCertificateValidation).IsTrue();
     }
 
     [Test]

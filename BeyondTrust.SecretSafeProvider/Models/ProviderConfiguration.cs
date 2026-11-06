@@ -13,6 +13,7 @@ public class ProviderConfiguration
     private const string PWD = "pwd";
     private const string CLIENT_ID = "client_id";
     private const string CLIENT_SECRET = "client_secret";
+    private const string INSECURE = "insecure";
 
     [Key(RUN_AS)]
     public string? RunAs { get; set; }
@@ -32,12 +33,19 @@ public class ProviderConfiguration
     [Key(CLIENT_SECRET)]
     public string? ClientSecret { get; set; }
 
+    [Key(INSECURE)]
+    public bool? Insecure { get; set; }
+
+    [IgnoreMember]
+    [JsonIgnore]
+    public bool SkipsCertificateValidation => Insecure == true;
+
     [IgnoreMember]
     [JsonIgnore]
     public bool UsesOAuth => !string.IsNullOrEmpty(ClientId) || !string.IsNullOrEmpty(ClientSecret);
 
     public void ReplaceValues(ProviderConfiguration configuration)
-        => (RunAs, Key, BaseUrl, Pwd, ClientId, ClientSecret) = (configuration.RunAs, configuration.Key, configuration.BaseUrl, configuration.Pwd, configuration.ClientId, configuration.ClientSecret);
+        => (RunAs, Key, BaseUrl, Pwd, ClientId, ClientSecret, Insecure) = (configuration.RunAs, configuration.Key, configuration.BaseUrl, configuration.Pwd, configuration.ClientId, configuration.ClientSecret, configuration.Insecure);
 
     public IReadOnlyList<string> Validate()
     {
@@ -81,6 +89,7 @@ public class ProviderConfiguration
                     new Schema.Types.Attribute() { Name = PWD, Type = TfTypes.String, Description = "Optional domain password for BeyondTrust Secret Safe authentication", Optional = true, Sensitive = true },
                     new Schema.Types.Attribute() { Name = CLIENT_ID, Type = TfTypes.String, Description = "OAuth client id of BeyondTrust Secret Safe. Required with client_secret, cannot be combined with key, runas or pwd", Optional = true, Sensitive = true },
                     new Schema.Types.Attribute() { Name = CLIENT_SECRET, Type = TfTypes.String, Description = "OAuth client secret of BeyondTrust Secret Safe. Required with client_id, cannot be combined with key, runas or pwd", Optional = true, Sensitive = true },
+                    new Schema.Types.Attribute() { Name = INSECURE, Type = TfTypes.Bool, Description = "Skips the validation of the Secret Safe TLS certificate. Defaults to false. Anyone in the network path can then impersonate Secret Safe and read the credentials, so use it only for testing", Optional = true },
                 }
             },
         };
