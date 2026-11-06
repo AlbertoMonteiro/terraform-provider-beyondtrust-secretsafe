@@ -105,7 +105,7 @@ The resulting binary:
 | Runtime dependencies | None (kernel only) |
 | Works on Alpine (`apk` empty) | ✅ |
 | Works on Debian/Ubuntu/RHEL | ✅ |
-| Works on `FROM scratch` / distroless | ✅ |
+| Works on `FROM scratch` / distroless | ✅ (needs a CA bundle, see below) |
 
 ### Why this works now
 
@@ -132,6 +132,7 @@ Two relatively recent additions to the .NET Native AOT toolchain made this possi
 - **Licensing:** OpenSSL v3 is Apache 2.0; static linking is treated as binary redistribution, so the license text must accompany the binary. The release workflow bundles `THIRD_PARTY_LICENSES/OPENSSL-LICENSE.txt` as `OPENSSL-LICENSE` inside the `linux_amd64` zip; `THIRD_PARTY_NOTICES.md` at the repo root documents this. Windows (Schannel) and macOS (SecureTransport) builds do not link OpenSSL and do not bundle the file.
 - **Build host must be Alpine (musl).** `StaticExecutable=true` does not work against glibc — glibc itself is hostile to full static linking ([dotnet/runtime#100230](https://github.com/dotnet/runtime/issues/100230)).
 - **`gcompat` is required inside the build image** so the glibc-only `protoc` shipped by `Grpc.Tools` can run during the build. It is **not** included in the final binary.
+- **The CA bundle still comes from the host.** The provider validates the Secret Safe server certificate unless `insecure = true`, and the statically linked OpenSSL reads the trusted roots from `/etc/ssl/certs`. Images built `FROM scratch` must copy that directory in; distroless and regular distro images already ship it.
 
 ### Historical note: why we avoided this before
 

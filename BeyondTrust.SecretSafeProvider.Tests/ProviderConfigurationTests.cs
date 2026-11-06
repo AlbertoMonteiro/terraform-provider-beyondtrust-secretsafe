@@ -1,4 +1,5 @@
-using BeyondTrust.SecretSafeProvider.Models;
+﻿using BeyondTrust.SecretSafeProvider.Models;
+using MessagePack;
 
 namespace BeyondTrust.SecretSafeProvider.Tests;
 
@@ -131,5 +132,35 @@ public class ProviderConfigurationTests
         await Assert.That(sut.ClientSecret).IsEqualTo("secret");
         await Assert.That(sut.Key).IsNull();
         await Assert.That(sut.RunAs).IsNull();
+    }
+
+    [Test]
+    public async Task MessagePack_WithoutInsecure_ValidatesCertificate()
+    {
+        // Arrange
+        var sut = Configuration(clientId: "id", clientSecret: "secret");
+
+        // Act
+        var result = MessagePackSerializer.Deserialize<ProviderConfiguration>(MessagePackSerializer.Serialize(sut));
+
+        // Assert
+        await Assert.That(result.Insecure).IsNull();
+        await Assert.That(result.SkipsCertificateValidation).IsFalse();
+    }
+
+    [Test]
+    [Arguments(true, true)]
+    [Arguments(false, false)]
+    public async Task MessagePack_WithInsecure_RoundTripsValue(bool insecure, bool expected)
+    {
+        // Arrange
+        var sut = Configuration(clientId: "id", clientSecret: "secret");
+        sut.Insecure = insecure;
+
+        // Act
+        var result = MessagePackSerializer.Deserialize<ProviderConfiguration>(MessagePackSerializer.Serialize(sut));
+
+        // Assert
+        await Assert.That(result.SkipsCertificateValidation).IsEqualTo(expected);
     }
 }

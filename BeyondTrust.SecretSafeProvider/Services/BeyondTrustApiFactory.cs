@@ -46,9 +46,17 @@ public class BeyondTrustApiFactory(ProviderConfiguration providerConfig, IConfig
     private OAuthBearerHandler CreateOAuthHandler()
         => new(BaseAddress, _providerConfig.ClientId!, _providerConfig.ClientSecret!, CreateHttpHandler());
 
-    private static HttpClientHandler CreateHttpHandler()
-        => new()
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
+    private HttpClientHandler CreateHttpHandler()
+        => CreateHttpHandler(_providerConfig.SkipsCertificateValidation);
+
+    // Without "insecure", the server certificate is validated against the system trust store
+    public static HttpClientHandler CreateHttpHandler(bool skipCertificateValidation)
+    {
+        HttpClientHandler handler = new();
+
+        if (skipCertificateValidation)
+            handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+
+        return handler;
+    }
 }

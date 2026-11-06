@@ -61,7 +61,7 @@ Complete documentation is available in the `/docs` directory:
 
 - **Terraform** >= 0.12 (>= 1.10 for ephemeral resources)
 - **BeyondTrust Secret Safe** instance with API access
-- **Linux x64** — the released `linux_amd64` binary is fully static (musl + statically-linked OpenSSL) and runs on any glibc or musl distro, including `FROM scratch` and distroless images, with no extra setup.
+- **Linux x64** — the released `linux_amd64` binary is fully static (musl + statically-linked OpenSSL) and runs on any glibc or musl distro with no extra libraries. The provider validates the Secret Safe TLS certificate against the system CA bundle (`insecure = true` turns that off, for testing only), so the image needs CA certificates (for example the `ca-certificates` package, or `/etc/ssl/certs` copied into a `FROM scratch` image).
 
 ## Development
 
