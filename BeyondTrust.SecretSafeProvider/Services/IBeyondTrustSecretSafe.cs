@@ -16,6 +16,9 @@ public interface IBeyondTrustSecretSafe
     [Get($"{V3}/Secrets-Safe/Secrets/{{secretId}}/file/download")]
     public Task<HttpResponseMessage> DownloadSecret(Guid secretId);
 
+    [Get($"{V3}/Secrets-Safe/Folders/{{folderId}}/secrets")]
+    public Task<List<SecretValue>> GetFolderSecrets(string folderId);
+
     [Post($"{V3}/Secrets-Safe/Folders/{{folderId}}/secrets")]
     public Task<SecretResponse> CreateCredentialSecret(string folderId, [Body] CreateSecretCredentialRequest request);
 
@@ -34,6 +37,10 @@ public interface IBeyondTrustSecretSafe
 
     [Post($"{V3}/Secrets-Safe/Folders/")]
     public Task<FolderResponse> CreateFolder([Body] FolderRequest request);
+
+    // The API matches part of the name and ignores case
+    [Get($"{V3}/Secrets-Safe/Folders/")]
+    public Task<List<FolderResponse>> FindFolders([AliasAs("FolderName")] string folderName);
 
     [Get($"{V3}/Secrets-Safe/Folders/{{id}}")]
     public Task<FolderResponse> GetFolder(string id);

@@ -13,10 +13,11 @@ The BeyondTrust Secret Safe provider allows you to manage and retrieve secrets f
 
 ## Supported Ephemeral Resources
 
-Same reads as the data sources, but the value stays out of the state and plan. Requires Terraform 1.10 or later.
+The values stay out of the state and plan. Requires Terraform 1.10 or later.
 
 - `secretsafe_credential_data` — Retrieve username/password credentials from a secret
 - `secretsafe_download_file_data` — Download file content from a secret as base64
+- `secretsafe_folder_credentials_data` — Retrieve the username/password of every credential in a folder, keyed by title
 
 ## Supported Resources
 
@@ -86,6 +87,11 @@ output "password" {
 # Retrieve credential data without storing it in the state
 ephemeral "secretsafe_credential_data" "example" {
   secret_id = "12345678-1234-1234-1234-123456789abc"
+}
+
+# Retrieve every credential of a folder without storing them in the state
+ephemeral "secretsafe_folder_credentials_data" "example" {
+  folder_name = "My Secure Folder"
 }
 
 # Download file content
