@@ -1,5 +1,6 @@
 using BeyondTrust.SecretSafeProvider.Models;
 using BeyondTrust.SecretSafeProvider.Services.DataSources;
+using BeyondTrust.SecretSafeProvider.Services.EphemeralResources;
 using BeyondTrust.SecretSafeProvider.Tests.Proto;
 using Google.Protobuf;
 using MessagePack;
@@ -203,6 +204,51 @@ public class IntegrationTests(AspireSetup aspire)
         await Assert.That(responseData.Username).IsEqualTo("service-account");
         await Assert.That(responseData.Password).IsEqualTo("SuperSecret123!");
         await Assert.That(responseData.SecretId).IsEqualTo(credential.SecretId);
+    }
+
+    [Test]
+    public async Task GetSchema_ReturnsFolderCredentialsEphemeralResourceSchema()
+    {
+        // Act
+        var response = await _client.GetSchemaAsync(new GetProviderSchema.Types.Request());
+
+        // Assert
+        await Assert.That(response.EphemeralResourceSchemas.ContainsKey(FolderCredentialsEphemeralResourceHandler.TYPE_NAME)).IsTrue();
+
+        var credentials = response.EphemeralResourceSchemas[FolderCredentialsEphemeralResourceHandler.TYPE_NAME].Block.Attributes.Single(a => a.Name == "credentials");
+        await Assert.That(credentials.Computed).IsTrue();
+        await Assert.That(credentials.Sensitive).IsTrue();
+    }
+
+    [Test]
+    [Arguments("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab", null)]
+    [Arguments(null, "APP")]
+    public async Task OpenEphemeralResource_WithFolderCredentialsRequest_ReturnsOnlyCredentials(string? folderId, string? folderName)
+    {
+        // Arrange
+        FolderCredentialsData folder = new() { FolderId = folderId, FolderName = folderName };
+
+        OpenEphemeralResource.Types.Request request = new()
+        {
+            TypeName = FolderCredentialsEphemeralResourceHandler.TYPE_NAME,
+            Config = new()
+            {
+                Msgpack = ByteString.CopyFrom(MessagePackSerializer.Serialize(folder)),
+            }
+        };
+
+        // Act
+        var resp = await _client.OpenEphemeralResourceAsync(request);
+
+        // Assert
+        await Assert.That(resp.Diagnostics).IsEmpty();
+
+        var responseData = MessagePackSerializer.Deserialize<FolderCredentialsData>(resp.Result.Msgpack.Memory);
+        await Assert.That(responseData.FolderId).IsEqualTo("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab");
+        await Assert.That(responseData.FolderName).IsEqualTo(folderName);
+        await Assert.That(responseData.Credentials!.Keys).IsEquivalentTo(["db-admin", "api-client"]);
+        await Assert.That(responseData.Credentials!["db-admin"].Username).IsEqualTo("dbadmin");
+        await Assert.That(responseData.Credentials!["db-admin"].Password).IsEqualTo("FolderDbSecret123!");
     }
 
     [Test]

@@ -17,5 +17,6 @@ public record SecretValue(
     string? FolderPath = null,
     List<OwnerInfo>? Owners = null,
     string? OwnerType = null,
-    string? Notes = null);
+    string? Notes = null,
+    string? SecretType = null);
 

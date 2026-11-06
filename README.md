@@ -51,6 +51,7 @@ Complete documentation is available in the `/docs` directory:
 - **Ephemeral Resources:**
   - [`secretsafe_credential_data`](./docs/ephemeral-resources/secretsafe_credential_data.md) - Retrieve credentials outside the state
   - [`secretsafe_download_file_data`](./docs/ephemeral-resources/secretsafe_download_file_data.md) - Download file secrets outside the state
+  - [`secretsafe_folder_credentials_data`](./docs/ephemeral-resources/secretsafe_folder_credentials_data.md) - Retrieve every credential of a folder outside the state
 - **Resources:**
   - [`secretsafe_folder`](./docs/resources/secretsafe_folder.md) - Manage folders
   - [`secretsafe_folder_credential`](./docs/resources/secretsafe_folder_credential.md) - Manage credentials

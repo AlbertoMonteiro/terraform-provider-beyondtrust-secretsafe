@@ -50,6 +50,57 @@ public static class BeyondTrustSessionExtensions
         };
     }
 
+    public static async Task<FolderCredentialsData> ReadFolderCredentials(this IBeyondTrustSecretSafe secretSafe, ProviderConfiguration configuration, string? folderId, string? folderName)
+    {
+        if (string.IsNullOrEmpty(folderId) == string.IsNullOrEmpty(folderName))
+            throw new ArgumentException("Set exactly one of \"folder_id\" or \"folder_name\".");
+
+        List<SecretValue> secrets;
+
+        await secretSafe.OpenSession(configuration);
+        try
+        {
+            if (string.IsNullOrEmpty(folderId))
+                folderId = FindFolderId(await secretSafe.FindFolders(folderName!), folderName!);
+
+            secrets = await secretSafe.GetFolderSecrets(folderId);
+        }
+        finally
+        {
+            await secretSafe.CloseSession(configuration);
+        }
+
+        var credentials = new Dictionary<string, FolderCredentialEntry>(StringComparer.Ordinal);
+
+        foreach (var secret in secrets.Where(s => string.Equals(s.SecretType, "Credential", StringComparison.OrdinalIgnoreCase)))
+        {
+            var title = secret.Title ?? string.Empty;
+
+            if (!credentials.TryAdd(title, new FolderCredentialEntry(secret.Id ?? string.Empty, secret.Username ?? string.Empty, secret.Password ?? string.Empty)))
+                throw new InvalidOperationException($"Folder {folderId} has more than one credential titled \"{title}\".");
+        }
+
+        return new FolderCredentialsData
+        {
+            FolderId = folderId,
+            FolderName = folderName,
+            Credentials = credentials,
+        };
+    }
+
+    // The search matches part of the name, so only an exact match, ignoring case like the API, is accepted
+    private static string FindFolderId(List<FolderResponse> folders, string folderName)
+    {
+        var matches = folders.Where(f => string.Equals(f.Name, folderName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        return matches.Count switch
+        {
+            0 => throw new InvalidOperationException($"Folder \"{folderName}\" was not found."),
+            1 => matches[0].Id,
+            _ => throw new InvalidOperationException($"Folder name \"{folderName}\" matches {matches.Count} folders: {string.Join(", ", matches.Select(f => f.Id))}. Use folder_id to choose one."),
+        };
+    }
+
     public static async Task DeleteSecretIfExists(this IBeyondTrustSecretSafe secretSafe, string secretId)
     {
         using var response = await secretSafe.DeleteSecret(secretId);

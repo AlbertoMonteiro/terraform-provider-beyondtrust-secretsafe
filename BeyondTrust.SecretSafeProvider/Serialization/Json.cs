@@ -8,6 +8,7 @@ namespace BeyondTrust.SecretSafeProvider.Serialization;
 [JsonSerializable(typeof(ProviderConfiguration))]
 [JsonSerializable(typeof(KeyAndRunAs))]
 [JsonSerializable(typeof(SecretValue))]
+[JsonSerializable(typeof(List<SecretValue>))]
 [JsonSerializable(typeof(SignAppinResponse))]
 [JsonSerializable(typeof(OAuthTokenResponse))]
 [JsonSerializable(typeof(CredentialData))]
@@ -21,7 +22,9 @@ namespace BeyondTrust.SecretSafeProvider.Serialization;
 [JsonSerializable(typeof(FolderFileSecretData))]
 [JsonSerializable(typeof(FolderRequest))]
 [JsonSerializable(typeof(FolderResponse))]
+[JsonSerializable(typeof(List<FolderResponse>))]
 [JsonSerializable(typeof(FolderResourceData))]
+[JsonSerializable(typeof(FolderCredentialsData))]
 [ExcludeFromCodeCoverage]
 public partial class Json : JsonSerializerContext
 {
