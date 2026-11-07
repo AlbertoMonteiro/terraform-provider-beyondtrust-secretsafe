@@ -222,6 +222,73 @@ public class IntegrationTests(AspireSetup aspire)
     }
 
     [Test]
+    public async Task GetSchema_ReturnsFolderCredentialsDataSourceSchema()
+    {
+        // Act
+        var response = await _client.GetSchemaAsync(new GetProviderSchema.Types.Request());
+
+        // Assert
+        await Assert.That(response.DataSourceSchemas.ContainsKey(FolderCredentialsDataSourceHandler.TYPE_NAME)).IsTrue();
+
+        var credentials = response.DataSourceSchemas[FolderCredentialsDataSourceHandler.TYPE_NAME].Block.Attributes.Single(a => a.Name == "credentials");
+        await Assert.That(credentials.Computed).IsTrue();
+        await Assert.That(credentials.Sensitive).IsTrue();
+    }
+
+    [Test]
+    [Arguments("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab", null)]
+    [Arguments(null, "APP")]
+    public async Task ReadDataSource_WithFolderCredentialsRequest_ReturnsOnlyCredentials(string? folderId, string? folderName)
+    {
+        // Arrange
+        FolderCredentialsData folder = new() { FolderId = folderId, FolderName = folderName };
+
+        ReadDataSource.Types.Request request = new()
+        {
+            TypeName = FolderCredentialsDataSourceHandler.TYPE_NAME,
+            Config = new()
+            {
+                Msgpack = ByteString.CopyFrom(MessagePackSerializer.Serialize(folder)),
+            }
+        };
+
+        // Act
+        var resp = await _client.ReadDataSourceAsync(request);
+
+        // Assert
+        await Assert.That(resp.Diagnostics).IsEmpty();
+
+        var responseData = MessagePackSerializer.Deserialize<FolderCredentialsData>(resp.State.Msgpack.Memory);
+        await Assert.That(responseData.FolderId).IsEqualTo("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab");
+        await Assert.That(responseData.FolderName).IsEqualTo(folderName);
+        await Assert.That(responseData.Credentials!.Keys).IsEquivalentTo(["db-admin", "api-client"]);
+        await Assert.That(responseData.Credentials!["db-admin"].Password).IsEqualTo("FolderDbSecret123!");
+    }
+
+    [Test]
+    public async Task ReadDataSource_WithFolderIdAndFolderName_ReturnsDiagnostic()
+    {
+        // Arrange
+        FolderCredentialsData folder = new() { FolderId = "7c77c6d6-a1b2-4c3d-8e9f-0123456789ab", FolderName = "app" };
+
+        ReadDataSource.Types.Request request = new()
+        {
+            TypeName = FolderCredentialsDataSourceHandler.TYPE_NAME,
+            Config = new()
+            {
+                Msgpack = ByteString.CopyFrom(MessagePackSerializer.Serialize(folder)),
+            }
+        };
+
+        // Act
+        var resp = await _client.ReadDataSourceAsync(request);
+
+        // Assert
+        await Assert.That(resp.Diagnostics).Count().IsEqualTo(1);
+        await Assert.That(resp.Diagnostics[0].Detail).IsEqualTo("Set exactly one of \"folder_id\" or \"folder_name\".");
+    }
+
+    [Test]
     [Arguments("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab", null)]
     [Arguments(null, "APP")]
     public async Task OpenEphemeralResource_WithFolderCredentialsRequest_ReturnsOnlyCredentials(string? folderId, string? folderName)

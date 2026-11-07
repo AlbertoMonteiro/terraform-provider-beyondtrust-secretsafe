@@ -10,6 +10,7 @@ The BeyondTrust Secret Safe provider allows you to manage and retrieve secrets f
 
 - `secretsafe_credential_data` — Retrieve username/password credentials from a secret
 - `secretsafe_download_file_data` — Download file content from a secret as base64
+- `secretsafe_folder_credentials_data` — Retrieve the username/password of every credential in a folder, keyed by title. The passwords are stored in the state; prefer the ephemeral resource where possible
 
 ## Supported Ephemeral Resources
 
