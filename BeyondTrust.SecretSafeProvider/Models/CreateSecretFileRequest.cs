@@ -6,5 +6,10 @@ public record CreateSecretFileRequest(
     string FileName,
     string FileContent,
     long OwnerId,
-    IList<OwnerInfo>? Owners = null,
-    string? FolderId = null);
+    string? FolderId = null)
+{
+    // Same rule as credentials: OwnerType is required, and "User" requires Owners
+    public string OwnerType => SecretOwner.USER;
+
+    public IList<OwnerInfo> Owners => SecretOwner.Single(OwnerId);
+}

@@ -117,7 +117,6 @@ public class FolderFileSecretResourceHandler(
                 FileName: plannedState.FileName,
                 FileContent: plannedState.FileContentBase64,
                 OwnerId: ownerId,
-                Owners: null,
                 FolderId: plannedState.FolderId);
 
             using var stream = new MemoryStream(fileBytes);

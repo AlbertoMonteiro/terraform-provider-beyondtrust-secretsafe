@@ -116,8 +116,7 @@ public class FolderCredentialResourceHandler(
                     Description: plannedState.Description,
                     Username: plannedState.Username,
                     Password: plannedState.Password,
-                    OwnerId: ownerId,
-                    Owners: null);
+                    OwnerId: ownerId);
 
                 secretResponse = await secretSafe.CreateCredentialSecret(plannedState.FolderId, request_body);
             }
@@ -130,7 +129,6 @@ public class FolderCredentialResourceHandler(
                     Username: plannedState.Username,
                     Password: plannedState.Password,
                     OwnerId: ownerId,
-                    Owners: null,
                     FolderId: plannedState.FolderId);
 
                 // The API answers 204, so the computed values must be read back
