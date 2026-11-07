@@ -76,6 +76,49 @@ public class ApiWireFormatTests
     }
 
     [Test]
+    public async Task CreateCredentialSecret_SendsUserOwnerTypeAndOwners()
+    {
+        // Arrange
+        _handler.Response = () => Json("""{ "Id": "id" }""");
+
+        // Act
+        await _sut.CreateCredentialSecret("folder", new CreateSecretCredentialRequest("Title", null, "user", "password", 1048));
+
+        // Assert
+        await Assert.That(_handler.Body).Contains("\"OwnerType\":\"User\"");
+        await Assert.That(_handler.Body).Contains("\"Owners\":[{\"OwnerId\":1048}]");
+    }
+
+    [Test]
+    public async Task UpdateCredentialSecret_SendsUserOwnerTypeAndOwners()
+    {
+        // Arrange
+        _handler.Response = () => new HttpResponseMessage(HttpStatusCode.NoContent);
+
+        // Act
+        await _sut.UpdateCredentialSecret("id", new CreateSecretCredentialRequest("Title", null, "user", "password", 1048, FolderId: "folder"));
+
+        // Assert
+        await Assert.That(_handler.Body).Contains("\"OwnerType\":\"User\"");
+        await Assert.That(_handler.Body).Contains("\"Owners\":[{\"OwnerId\":1048}]");
+    }
+
+    [Test]
+    public async Task CreateFileSecret_SendsUserOwnerTypeAndOwnersInMetadata()
+    {
+        // Arrange
+        _handler.Response = () => Json("""{ "Id": "id" }""");
+        using var stream = new MemoryStream("content"u8.ToArray());
+
+        // Act
+        await _sut.CreateFileSecret("folder", new CreateSecretFileRequest("Title", null, "file.txt", "Y29udGVudA==", 1048, "folder"), new Refit.StreamPart(stream, "file.txt", "application/octet-stream"));
+
+        // Assert
+        await Assert.That(_handler.Body).Contains("\"OwnerType\":\"User\"");
+        await Assert.That(_handler.Body).Contains("\"Owners\":[{\"OwnerId\":1048}]");
+    }
+
+    [Test]
     public async Task DeleteSecret_UsesSecretPath()
     {
         // Arrange

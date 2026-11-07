@@ -10,7 +10,15 @@
         }
       ]
     },
-    "Methods": [ "POST" ]
+    "Methods": [
+      "POST"
+    ],
+    "Body": {
+      "Matcher": {
+        "Name": "RegexMatcher",
+        "Pattern": "\"OwnerType\"\\s*:\\s*\"User\"[\\s\\S]*\"Owners\"\\s*:\\s*\\[\\s*\\{\\s*\"OwnerId\"|\"Owners\"\\s*:\\s*\\[\\s*\\{\\s*\"OwnerId\"[\\s\\S]*\"OwnerType\"\\s*:\\s*\"User\""
+      }
+    }
   },
   "Response": {
     "StatusCode": 201,
