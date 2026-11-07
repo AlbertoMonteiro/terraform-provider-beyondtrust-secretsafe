@@ -60,7 +60,10 @@ public class CredentialEphemeralResourceHandlerTests
         var configuration = new ProviderConfiguration { ClientId = "client-id", ClientSecret = "client-secret", BaseUrl = "" };
         var sut = CreateSut(configuration);
 
-        _secretSafe.GetSecret(secretId).ReturnsAsync(new SecretValue(Username: "service-account", Password: "s3cret"));
+        _secretSafe.GetSecret(secretId).ReturnsAsync(new SecretValue(
+            Username: "service-account", Password: "s3cret", Title: "db", Description: "desc", FolderId: "folder", OwnerId: 9,
+            CreatedOn: "2026-10-01T00:00:00Z", CreatedBy: "creator", ModifiedOn: "2026-10-20T13:45:10.5Z", ModifiedBy: "editor",
+            Owner: "owner", FolderPath: "root/app", OwnerType: "User", Notes: "notes"));
 
         // Act
         var response = await sut.OpenAsync(OpenRequest(secretId));
@@ -71,6 +74,18 @@ public class CredentialEphemeralResourceHandlerTests
         _secretSafe.Signout().Called(Count.Never());
 
         await Assert.That(result.Password).IsEqualTo("s3cret");
+        await Assert.That(result.Title).IsEqualTo("db");
+        await Assert.That(result.Description).IsEqualTo("desc");
+        await Assert.That(result.FolderId).IsEqualTo("folder");
+        await Assert.That(result.OwnerId).IsEqualTo(9);
+        await Assert.That(result.CreatedOn).IsEqualTo("2026-10-01T00:00:00Z");
+        await Assert.That(result.CreatedBy).IsEqualTo("creator");
+        await Assert.That(result.ModifiedOn).IsEqualTo("2026-10-20T13:45:10.5Z");
+        await Assert.That(result.ModifiedBy).IsEqualTo("editor");
+        await Assert.That(result.Owner).IsEqualTo("owner");
+        await Assert.That(result.FolderPath).IsEqualTo("root/app");
+        await Assert.That(result.OwnerType).IsEqualTo("User");
+        await Assert.That(result.Notes).IsEqualTo("notes");
     }
 
     [Test]
@@ -85,6 +100,6 @@ public class CredentialEphemeralResourceHandlerTests
         // Assert
         await Assert.That(sut.TypeName).IsEqualTo("secretsafe_credential_data");
         await Assert.That(schema.Block.Attributes.Single(a => a.Name == "password").Sensitive).IsTrue();
-        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(3);
+        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(15);
     }
 }

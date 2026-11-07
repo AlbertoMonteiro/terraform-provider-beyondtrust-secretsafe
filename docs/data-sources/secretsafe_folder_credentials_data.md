@@ -39,6 +39,10 @@ Set exactly one of these:
   - `secret_id` - (String) The secret ID
   - `username` - (String) The username from the credential secret
   - `password` - (String) The password from the credential secret
+  - `created_on` - (String) When the credential was created, in RFC 3339 UTC as returned by Secret Safe (for example `2026-10-14T18:57:26.7Z`)
+  - `created_by` - (String) User who created the credential
+  - `modified_on` - (String) When the credential was last modified, in the same format as `created_on`
+  - `modified_by` - (String) User who last modified the credential
 
 The whole map is sensitive, so usernames are too. Wrap a value in `nonsensitive()` to show it.
 

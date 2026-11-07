@@ -57,6 +57,7 @@ public class FileDownloadDataSourceHandlerTests
         };
 
         imposter.DownloadSecret(secretId).ReturnsAsync(httpResponse);
+        imposter.GetSecret(secretId).ReturnsAsync(new SecretValue(Title: "certificate", FileHash: "abc123", ModifiedOn: "2026-10-20T13:45:10.5Z", ModifiedBy: "admin", OwnerId: 7));
 
         // Act
         var result = await _sut.ReadAsync(request);
@@ -71,6 +72,12 @@ public class FileDownloadDataSourceHandlerTests
         await Assert.That(resultData.FileName).IsEqualTo("secret.txt");
         await Assert.That(resultData.FileContentBase64).IsEqualTo(Convert.ToBase64String(fileContent));
         await Assert.That(resultData.SecretId).IsEqualTo(secretId.ToString("N"));
+        await Assert.That(resultData.Title).IsEqualTo("certificate");
+        await Assert.That(resultData.FileHash).IsEqualTo("abc123");
+        await Assert.That(resultData.ModifiedOn).IsEqualTo("2026-10-20T13:45:10.5Z");
+        await Assert.That(resultData.ModifiedBy).IsEqualTo("admin");
+        await Assert.That(resultData.OwnerId).IsEqualTo(7);
+        imposter.GetSecret(secretId).Called(Count.Once());
     }
 
     [Test]

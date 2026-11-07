@@ -15,13 +15,13 @@ public class CredentialDataTests
     }
 
     [Test]
-    public async Task GetSchema_ReturnsSchemaWithThreeAttributes()
+    public async Task GetSchema_ReturnsCredentialAndMetadataAttributes()
     {
         // Act
         var schema = CredentialData.GetSchema();
 
         // Assert
-        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(3);
+        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(15);
     }
 
     [Test]

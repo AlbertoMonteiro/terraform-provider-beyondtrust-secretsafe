@@ -46,6 +46,7 @@ public class FileDownloadEphemeralResourceHandlerTests
         var sut = CreateSut(new ProviderConfiguration { Key = "key", RunAs = "user", BaseUrl = "" });
 
         _secretSafe.DownloadSecret(secretId).ReturnsAsync(FileResponse(fileContent));
+        _secretSafe.GetSecret(secretId).ReturnsAsync(new SecretValue(ModifiedOn: "2026-10-20T13:45:10.5Z"));
 
         // Act
         var response = await sut.OpenAsync(OpenRequest(secretId));
@@ -58,6 +59,7 @@ public class FileDownloadEphemeralResourceHandlerTests
         await Assert.That(result.SecretId).IsEqualTo(secretId.ToString("N"));
         await Assert.That(result.FileName).IsEqualTo("secret.txt");
         await Assert.That(result.FileContentBase64).IsEqualTo(Convert.ToBase64String(fileContent));
+        await Assert.That(result.ModifiedOn).IsEqualTo("2026-10-20T13:45:10.5Z");
     }
 
     [Test]
@@ -69,6 +71,7 @@ public class FileDownloadEphemeralResourceHandlerTests
         var sut = CreateSut(new ProviderConfiguration { ClientId = "client-id", ClientSecret = "client-secret", BaseUrl = "" });
 
         _secretSafe.DownloadSecret(secretId).ReturnsAsync(FileResponse(fileContent));
+        _secretSafe.GetSecret(secretId).ReturnsAsync(new SecretValue(ModifiedOn: "2026-10-20T13:45:10.5Z"));
 
         // Act
         var response = await sut.OpenAsync(OpenRequest(secretId));
@@ -93,6 +96,6 @@ public class FileDownloadEphemeralResourceHandlerTests
         // Assert
         await Assert.That(sut.TypeName).IsEqualTo("secretsafe_download_file_data");
         await Assert.That(schema.Block.Attributes.Single(a => a.Name == "file_content_base64").Sensitive).IsTrue();
-        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(3);
+        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(16);
     }
 }

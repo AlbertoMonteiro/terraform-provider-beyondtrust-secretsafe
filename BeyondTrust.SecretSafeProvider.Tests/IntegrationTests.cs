@@ -35,7 +35,11 @@ public class IntegrationTests(AspireSetup aspire)
         // Assert — credential data source schema
         await Assert.That(response.DataSourceSchemas.ContainsKey(CredentialDataSourceHandler.TYPE_NAME)).IsTrue();
         var attrs = response.DataSourceSchemas[CredentialDataSourceHandler.TYPE_NAME].Block.Attributes;
-        await Assert.That(attrs).Count().IsEqualTo(3);
+        await Assert.That(attrs).Count().IsEqualTo(15);
+
+        var modifiedOn = attrs.Single(a => a.Name == "modified_on");
+        await Assert.That(modifiedOn.Computed).IsTrue();
+        await Assert.That(modifiedOn.Sensitive).IsFalse();
 
         var secretId = attrs.Single(a => a.Name == "secret_id");
         await Assert.That(secretId.Required).IsTrue();
@@ -78,6 +82,10 @@ public class IntegrationTests(AspireSetup aspire)
         await Assert.That(responseData.Username).IsEqualTo("service-account");
         await Assert.That(responseData.Password).IsEqualTo("SuperSecret123!");
         await Assert.That(responseData.SecretId).IsEqualTo(credential.SecretId);
+        await Assert.That(responseData.Title).IsEqualTo("My Test Secret");
+        await Assert.That(responseData.ModifiedOn).IsEqualTo("2026-10-20T13:45:10.5Z");
+        await Assert.That(responseData.ModifiedBy).IsEqualTo("admin");
+        await Assert.That(responseData.OwnerId).IsEqualTo(1);
     }
 
     [Test]
@@ -118,7 +126,8 @@ public class IntegrationTests(AspireSetup aspire)
         // Assert
         await Assert.That(response.DataSourceSchemas.ContainsKey(FileDownloadDataSourceHandler.TYPE_NAME)).IsTrue();
         var attrs = response.DataSourceSchemas[FileDownloadDataSourceHandler.TYPE_NAME].Block.Attributes;
-        await Assert.That(attrs).Count().IsEqualTo(3);
+        await Assert.That(attrs).Count().IsEqualTo(16);
+        await Assert.That(attrs.Single(a => a.Name == "file_hash").Computed).IsTrue();
 
         var secretId = attrs.Single(a => a.Name == "secret_id");
         await Assert.That(secretId.Required).IsTrue();
@@ -162,6 +171,7 @@ public class IntegrationTests(AspireSetup aspire)
         await Assert.That(responseData.FileContentBase64).IsEqualTo(expectedContent);
         await Assert.That(responseData.FileName).IsEqualTo("secret.txt");
         await Assert.That(responseData.SecretId).IsEqualTo(fileDownload.SecretId);
+        await Assert.That(responseData.ModifiedOn).IsEqualTo("2026-10-20T13:45:10.5Z");
     }
 
     [Test]
@@ -263,6 +273,38 @@ public class IntegrationTests(AspireSetup aspire)
         await Assert.That(responseData.FolderName).IsEqualTo(folderName);
         await Assert.That(responseData.Credentials!.Keys).IsEquivalentTo(["db-admin", "api-client"]);
         await Assert.That(responseData.Credentials!["db-admin"].Password).IsEqualTo("FolderDbSecret123!");
+        await Assert.That(responseData.Credentials!["db-admin"].ModifiedOn).IsEqualTo("2026-10-21T08:30:00.25Z");
+        await Assert.That(responseData.Credentials!["db-admin"].ModifiedBy).IsEqualTo("folder-admin");
+    }
+
+    [Test]
+    [Arguments("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab", null)]
+    [Arguments(null, "APP")]
+    public async Task ReadDataSource_WithFolderCredentialsMetadataRequest_ReturnsMetadataWithoutSecrets(string? folderId, string? folderName)
+    {
+        // Arrange
+        FolderCredentialsMetadataData folder = new() { FolderId = folderId, FolderName = folderName };
+
+        ReadDataSource.Types.Request request = new()
+        {
+            TypeName = FolderCredentialsMetadataDataSourceHandler.TYPE_NAME,
+            Config = new()
+            {
+                Msgpack = ByteString.CopyFrom(MessagePackSerializer.Serialize(folder)),
+            }
+        };
+
+        // Act
+        var resp = await _client.ReadDataSourceAsync(request);
+
+        // Assert
+        await Assert.That(resp.Diagnostics).IsEmpty();
+
+        var responseData = MessagePackSerializer.Deserialize<FolderCredentialsMetadataData>(resp.State.Msgpack.Memory);
+        await Assert.That(responseData.FolderId).IsEqualTo("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab");
+        await Assert.That(responseData.Credentials!.Keys).IsEquivalentTo(["db-admin", "api-client"]);
+        await Assert.That(responseData.Credentials!["db-admin"].ModifiedOn).IsEqualTo("2026-10-21T08:30:00.25Z");
+        await Assert.That(MessagePackSerializer.ConvertToJson(resp.State.Msgpack.Memory)).DoesNotContain("FolderDbSecret123!");
     }
 
     [Test]
