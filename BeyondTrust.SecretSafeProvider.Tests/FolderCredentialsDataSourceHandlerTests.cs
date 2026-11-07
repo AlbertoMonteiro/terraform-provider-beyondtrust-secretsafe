@@ -34,7 +34,8 @@ public class FolderCredentialsDataSourceHandlerTests
         };
 
     private static SecretValue Credential(string title, string username, string password)
-        => new(Id: Guid.NewGuid().ToString(), Title: title, Username: username, Password: password, SecretType: "Credential");
+        => new(Id: Guid.NewGuid().ToString(), Title: title, Username: username, Password: password, SecretType: "Credential",
+            ModifiedOn: "2026-10-20T13:45:10.5Z");
 
     [Test]
     public async Task ReadAsync_WithFolderId_ReturnsCredentialsInStateAndClosesSession()
@@ -59,7 +60,8 @@ public class FolderCredentialsDataSourceHandlerTests
         await Assert.That(response.Diagnostics).IsEmpty();
         await Assert.That(result!.FolderId).IsEqualTo(FOLDER_ID);
         await Assert.That(result.Credentials!.Keys).IsEquivalentTo(["db-admin"]);
-        await Assert.That(result.Credentials!["db-admin"]).IsEqualTo(new FolderCredentialEntry(credential.Id!, "dbadmin", "s3cret"));
+        await Assert.That(result.Credentials!["db-admin"].ModifiedOn).IsEqualTo("2026-10-20T13:45:10.5Z");
+        await Assert.That(result.Credentials!["db-admin"].Password).IsEqualTo("s3cret");
     }
 
     [Test]

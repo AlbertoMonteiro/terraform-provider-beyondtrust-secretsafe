@@ -36,3 +36,15 @@ Ephemeral values can only be used where Terraform accepts them, such as write-on
 - `secret_id` - (String) The secret ID
 - `username` - (String) The username from the credential secret
 - `password` - (String, Sensitive) The password from the credential secret
+- `title` - (String) The title of the credential
+- `description` - (String) The description of the credential
+- `folder_id` - (String) The ID of the parent folder
+- `owner_id` - (Number) ID of the secret owner
+- `created_on` - (String) When the credential was created, in RFC 3339 UTC as returned by Secret Safe (for example `2026-10-14T18:57:26.7Z`)
+- `created_by` - (String) User who created the credential
+- `modified_on` - (String) When the credential was last modified, in the same format as `created_on`
+- `modified_by` - (String) User who last modified the credential
+- `owner` - (String) Name of the secret owner
+- `folder_path` - (String) Full path to the parent folder
+- `owner_type` - (String) Type of owner (e.g., "User", "Group")
+- `notes` - (String) Additional notes about the credential

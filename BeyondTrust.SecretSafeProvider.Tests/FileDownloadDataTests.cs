@@ -15,13 +15,13 @@ public class FileDownloadDataTests
     }
 
     [Test]
-    public async Task GetSchema_ReturnsSchemaWithThreeAttributes()
+    public async Task GetSchema_ReturnsFileAndMetadataAttributes()
     {
         // Act
         var schema = FileDownloadData.GetSchema();
 
         // Assert
-        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(3);
+        await Assert.That(schema.Block.Attributes).Count().IsEqualTo(16);
     }
 
     [Test]

@@ -34,7 +34,8 @@ public class FolderCredentialsEphemeralResourceHandlerTests
         };
 
     private static SecretValue Credential(string title, string username, string password)
-        => new(Id: Guid.NewGuid().ToString(), Title: title, Username: username, Password: password, SecretType: "Credential");
+        => new(Id: Guid.NewGuid().ToString(), Title: title, Username: username, Password: password, SecretType: "Credential",
+            CreatedOn: "2026-10-01T00:00:00Z", CreatedBy: "creator", ModifiedOn: "2026-10-20T13:45:10.5Z", ModifiedBy: "editor");
 
     [Test]
     public async Task OpenAsync_WithApiKey_ReturnsCredentialsAndClosesSession()
@@ -57,7 +58,8 @@ public class FolderCredentialsEphemeralResourceHandlerTests
 
         await Assert.That(result!.FolderId).IsEqualTo(FOLDER_ID);
         await Assert.That(result.FolderName).IsNull();
-        await Assert.That(result.Credentials!["db-admin"]).IsEqualTo(new FolderCredentialEntry(credential.Id!, "dbadmin", "s3cret"));
+        await Assert.That(result.Credentials!["db-admin"]).IsEqualTo(
+            new FolderCredentialEntry(credential.Id!, "dbadmin", "s3cret", "2026-10-01T00:00:00Z", "creator", "2026-10-20T13:45:10.5Z", "editor"));
     }
 
     [Test]
@@ -243,6 +245,6 @@ public class FolderCredentialsEphemeralResourceHandlerTests
         await Assert.That(attributes["folder_name"].Optional && !attributes["folder_name"].Computed).IsTrue();
         await Assert.That(attributes["credentials"].Computed && attributes["credentials"].Sensitive).IsTrue();
         await Assert.That(attributes["credentials"].Type.ToStringUtf8())
-            .IsEqualTo("""["map",["object",{"secret_id":"string","username":"string","password":"string"}]]""");
+            .IsEqualTo("""["map",["object",{"secret_id":"string","username":"string","password":"string","created_on":"string","created_by":"string","modified_on":"string","modified_by":"string"}]]""");
     }
 }

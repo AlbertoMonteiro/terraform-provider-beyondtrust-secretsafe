@@ -18,5 +18,6 @@ public record SecretValue(
     List<OwnerInfo>? Owners = null,
     string? OwnerType = null,
     string? Notes = null,
-    string? SecretType = null);
+    string? SecretType = null,
+    string? FileHash = null);
 

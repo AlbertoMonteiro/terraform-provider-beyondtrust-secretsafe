@@ -14,7 +14,7 @@ public class FolderCredentialsDataTests
             FolderId = "7c77c6d6-a1b2-4c3d-8e9f-0123456789ab",
             Credentials = new Dictionary<string, FolderCredentialEntry>
             {
-                ["db-admin"] = new("3f33f2c2-e6d3-4b28-cd01-2345678901bc", "dbadmin", "s3cret"),
+                ["db-admin"] = new("3f33f2c2-e6d3-4b28-cd01-2345678901bc", "dbadmin", "s3cret", "2026-10-01T00:00:00Z", "creator", "2026-10-20T13:45:10.5Z", "editor"),
                 ["api-client"] = new("4a44a3d3-f7e4-4c39-de12-3456789012cd", "apiclient", "p4ss"),
             },
         };
@@ -66,7 +66,7 @@ public class FolderCredentialsDataTests
         var sut = new FolderCredentialsData
         {
             FolderId = "7c77c6d6-a1b2-4c3d-8e9f-0123456789ab",
-            Credentials = new Dictionary<string, FolderCredentialEntry> { ["db-admin"] = new("id", "user", "pass") },
+            Credentials = new Dictionary<string, FolderCredentialEntry> { ["db-admin"] = new("id", "user", "pass", "c-on", "c-by", "m-on", null) },
         };
 
         // Act
@@ -74,7 +74,7 @@ public class FolderCredentialsDataTests
 
         // Assert
         await Assert.That(json).Contains("""
-            "credentials":{"db-admin":{"secret_id":"id","username":"user","password":"pass"}}
+            "credentials":{"db-admin":{"secret_id":"id","username":"user","password":"pass","created_on":"c-on","created_by":"c-by","modified_on":"m-on","modified_by":null}}
             """);
     }
 }

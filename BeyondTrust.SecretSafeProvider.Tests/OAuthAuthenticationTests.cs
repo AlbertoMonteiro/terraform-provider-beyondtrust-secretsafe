@@ -106,6 +106,7 @@ public class OAuthAuthenticationTests
         {
             Config = SmartSerializer.Serialize(new FileDownloadData { SecretId = secretId.ToString("N") })
         };
+        _secretSafe.GetSecret(secretId).ReturnsAsync(new SecretValue());
         _secretSafe.DownloadSecret(secretId).ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent("content"u8.ToArray())
