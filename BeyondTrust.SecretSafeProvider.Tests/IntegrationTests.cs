@@ -278,6 +278,36 @@ public class IntegrationTests(AspireSetup aspire)
     }
 
     [Test]
+    [Arguments("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab", null)]
+    [Arguments(null, "APP")]
+    public async Task ReadDataSource_WithFolderCredentialsMetadataRequest_ReturnsMetadataWithoutSecrets(string? folderId, string? folderName)
+    {
+        // Arrange
+        FolderCredentialsMetadataData folder = new() { FolderId = folderId, FolderName = folderName };
+
+        ReadDataSource.Types.Request request = new()
+        {
+            TypeName = FolderCredentialsMetadataDataSourceHandler.TYPE_NAME,
+            Config = new()
+            {
+                Msgpack = ByteString.CopyFrom(MessagePackSerializer.Serialize(folder)),
+            }
+        };
+
+        // Act
+        var resp = await _client.ReadDataSourceAsync(request);
+
+        // Assert
+        await Assert.That(resp.Diagnostics).IsEmpty();
+
+        var responseData = MessagePackSerializer.Deserialize<FolderCredentialsMetadataData>(resp.State.Msgpack.Memory);
+        await Assert.That(responseData.FolderId).IsEqualTo("7c77c6d6-a1b2-4c3d-8e9f-0123456789ab");
+        await Assert.That(responseData.Credentials!.Keys).IsEquivalentTo(["db-admin", "api-client"]);
+        await Assert.That(responseData.Credentials!["db-admin"].ModifiedOn).IsEqualTo("2026-10-21T08:30:00.25Z");
+        await Assert.That(MessagePackSerializer.ConvertToJson(resp.State.Msgpack.Memory)).DoesNotContain("FolderDbSecret123!");
+    }
+
+    [Test]
     public async Task ReadDataSource_WithFolderIdAndFolderName_ReturnsDiagnostic()
     {
         // Arrange

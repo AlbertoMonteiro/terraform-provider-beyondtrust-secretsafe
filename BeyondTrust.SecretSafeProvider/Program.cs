@@ -36,6 +36,7 @@ builder.Services.AddSingleton(emptyConfiguration);
 builder.Services.AddSingleton<IDataSourceHandler, CredentialDataSourceHandler>();
 builder.Services.AddSingleton<IDataSourceHandler, FileDownloadDataSourceHandler>();
 builder.Services.AddSingleton<IDataSourceHandler, FolderCredentialsDataSourceHandler>();
+builder.Services.AddSingleton<IDataSourceHandler, FolderCredentialsMetadataDataSourceHandler>();
 builder.Services.AddSingleton<IEphemeralResourceHandler, CredentialEphemeralResourceHandler>();
 builder.Services.AddSingleton<IEphemeralResourceHandler, FileDownloadEphemeralResourceHandler>();
 builder.Services.AddSingleton<IEphemeralResourceHandler, FolderCredentialsEphemeralResourceHandler>();
